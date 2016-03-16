@@ -114,7 +114,7 @@ function TSetupForm.Execute: integer;
 var i: integer;
 
 begin;
-i := 0;
+i := -1;
 DriverEdit.ItemIndex:=SetupData.Driver;
 CANSpeedEdit.ItemIndex:=SetupData.CANSpeed;
 LomCheckBox.Checked := SetupData.ListenOnly;
@@ -130,6 +130,7 @@ SnrEdit.Text := SetupData.HardwareSnr;
 UpdateSetupForm;
 if ShowModal = idOk then
   begin;
+  i := 0;
   SetupData.CANSpeed:=CANSpeedEdit.ItemIndex;
   SetupData.ListenOnly := LomCheckBox.Checked;
   SetupData.ShowErrorMessages := ShowErrMsgCheckBox.Checked;

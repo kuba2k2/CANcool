@@ -160,7 +160,7 @@ else
     cnt := 2;
   RxView.RowCount := cnt;
   RxView.ColCount := 6;
-  RxView.ColWidths[0]:=70;
+  RxView.ColWidths[0]:=80;
   RxView.Cells[0,0]:='Time [ms]';
   RxView.ColWidths[1]:=55;
   RxView.Cells[1,0]:='Frame';
@@ -473,7 +473,7 @@ var can_msg: PCanMsg;
     d, len, err_nr, bus_stat: Byte;
     dlc, i: integer;
     rtr, eff: boolean;
-    ofs, timestamp, msg_count: DWord;
+    ofs, timestamp, s, ms, msg_count: DWord;
 
 begin
 if ARow = 0 then
@@ -563,7 +563,11 @@ if FObjectMode then
   end;
 case ACol of
   0 : begin        // Timestamp
-      str := format('%u', [timestamp]);
+      //str := format('%u', [timestamp]); <*>
+      s := timestamp div 1000;
+      ms := timestamp mod 1000;
+      str := format('%6u.%.3u', [s,ms]);
+      
       end;
   1 : begin;                         // Frame Format
       if rtr and eff then
@@ -656,6 +660,8 @@ procedure TCanRxWin.RxCanUpdate;
 var cnt: Integer;
 
 begin
+if not EnableTrace then
+  exit;
 if FObjectMode then
   cnt := RxObjList.Count + 1
 else

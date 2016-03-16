@@ -200,8 +200,6 @@ type
     DrvStatus: TDrvStatus;
     CanStatus: TCanStatus;
     BusFailure: boolean;
-    //EmpfangDatei: string;
-    //SendenDatei: string;
     ProjectFile: String;
     CanRxWin: TCanRxWin;
     CanTxWin: TCanTxWin;
@@ -212,10 +210,11 @@ type
     function  MenuMDIClientHinzufuegen(Sender: TForm): TMenuItem;
     procedure MenuMDIClientEntfernen(MenuItem: TMenuItem);
     procedure NewProject;
-    function LoadProject(filename: String): Integer;
-    procedure SaveProject(filename: String);
+    function LoadProject(filename: String): boolean;
+    function SaveProject(filename: String): boolean;
     function SetListenOnly: Integer;
     function ConnectHardware: Integer;
+    procedure SetProjectName;
     procedure SetSetup(mode : Integer);
     procedure DisplayHint(Sender: TObject);
     procedure SetRxPannelShow;
@@ -266,7 +265,7 @@ var cfg: TIniFile;
 begin;
 InitUtil;
 RxMsgBuffer := AllocMem(RxMsgBufferSize * SizeOf(TCanMsg));
-DataRecord:=RecordStop;
+DataRecord := RecordStop;
 //StatusBar.Font.Style := [];
 cfg := TIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
 try
@@ -278,17 +277,26 @@ end;
 
 
 procedure TMainWin.FormShow(Sender: TObject);
+var default_prj_file: boolean;
+
 begin;
 {Hilfe in der Statuszeile}
 //Application.OnHint:=DisplayHint;
 // Project laden
+default_prj_file := FALSE;
 if ProjectFile = '' then
-  ProjectFile := ChangeFileExt(Application.ExeName, '.prj');
-if LoadProject(ProjectFile) < 0 then
   begin;
+  default_prj_file := TRUE;
+  ProjectFile := ChangeFileExt(Application.ExeName, '.prj');
+  end;
+if not LoadProject(ProjectFile) then  
+  begin;
+  if not default_prj_file then  
+    ProjectFile := '';
   NewProject;
   SetSetup(1);
-  end;
+  end;   
+SetProjectName;  
 RefreshStatusBar;
 end;
 
@@ -308,8 +316,11 @@ finally
   cfg.Free;
   end;
 // Project speichern
-if length(ProjectFile) > 0 then
-  SaveProject(ProjectFile);
+if ProjectFile <> '' then
+  begin;
+  if not SaveProject(ProjectFile) then
+    MessageDlg('Projekt (' + ProjectFile + ') kann nicht gespeichert werden', mtError, [mbOk], 0);
+  end;
 DestroyUtil;
 FreeMem(RxMsgBuffer);
 end;
@@ -355,27 +366,24 @@ if MDIChildCount > 0 then
     end;
   end;
 if not Assigned(CanRxWin) then
-  begin;
   CanRxWin := TCanRxWin(MDIClientNew(TCanRxWin));
-  CanRxWin.Left := 2;
-  CanRxWin.Top := 2;
-  CanRxWin.Width := 600;
-  CanRxWin.Height := 303;
-  end;
+CanRxWin.Left := 2;
+CanRxWin.Top := 2;
+CanRxWin.Width := 600;
+CanRxWin.Height := 303;
 if not Assigned(CanTxWin) then
-  begin;
   CanTxWin := TCanTxWin(MDIClientNew(TCanTxWin));
-  CanTxWin.Left := 2;
-  CanTxWin.Top := 309;
-  CanTxWin.Width := 880;
-  CanTxWin.Height := 254;
-  end;
+CanTxWin.Left := 2;
+CanTxWin.Top := 309;
+CanTxWin.Width := 880;
+CanTxWin.Height := 254;
+
 CanRxWin.Show;
 CanTxWin.Show;
 end;
 
 
-function TMainWin.LoadProject(filename: String): Integer;
+function TMainWin.LoadProject(filename: String): boolean;
 var i: integer;
     ini_file: TIniFile;
     SectionsListe: TStringList;
@@ -384,55 +392,58 @@ var i: integer;
     Form: TForm;
 
 begin
-NewProject();
+NewProject;
 SectionsListe := TStringList.Create;
 ConfigList := TStringList.Create;
-
+result := TRUE;
 ini_file := TIniFile.Create(filename);
 try
-  LoadSetup(ini_file);
-  Left := ini_file.ReadInteger('MainWin', 'XPos', 0);
-  Top := ini_file.ReadInteger('MainWin', 'YPos', 0);
-  Width := ini_file.ReadInteger('MainWin', 'Width', 1100);
-  Height := ini_file.ReadInteger('MainWin', 'Height', 760);
-  ini_file.ReadSections(SectionsListe);
-  for i := SectionsListe.Count - 1 downto 0 do
-    begin
-    if AnsiStartsText('MDIWin', SectionsListe.Strings[i]) then
+  try
+    LoadSetup(ini_file);
+    Left := ini_file.ReadInteger('MainWin', 'XPos', 0);
+    Top := ini_file.ReadInteger('MainWin', 'YPos', 0);
+    Width := ini_file.ReadInteger('MainWin', 'Width', 1100);
+    Height := ini_file.ReadInteger('MainWin', 'Height', 760);
+    ini_file.ReadSections(SectionsListe);
+    for i := SectionsListe.Count - 1 downto 0 do
       begin
-      form_class := GetClass(ini_file.ReadString(SectionsListe.Strings[i], 'Type', ''));
-      if form_class <> nil then
+      if AnsiStartsText('MDIWin', SectionsListe.Strings[i]) then
         begin
-        if form_class = TCanRxWin then
-          form := CanRxWin
-        else if form_class = TCanTxWin then
-          form := CanTxWin
-        else
-          form := MDIClientNew(TFormClass(form_class));
-        form.Left := ini_file.ReadInteger(SectionsListe.Strings[i], 'XPos', 0);
-        form.Top := ini_file.ReadInteger(SectionsListe.Strings[i], 'YPos', 0);
-        form.Width := ini_file.ReadInteger(SectionsListe.Strings[i], 'Width', 850);
-        form.Height := ini_file.ReadInteger(SectionsListe.Strings[i], 'Height', 350);
-        if form is TCanRxPrototypForm then
+        form_class := GetClass(ini_file.ReadString(SectionsListe.Strings[i], 'Type', ''));
+        if form_class <> nil then
           begin
-          ConfigList.Clear;
-          ini_file.ReadSectionValues(SectionsListe.Strings[i], ConfigList);
-          TCanRxPrototypForm(Form).LoadConfig(ConfigList);
+          if form_class = TCanRxWin then
+            form := CanRxWin
+          else if form_class = TCanTxWin then
+            form := CanTxWin
+          else
+            form := MDIClientNew(TFormClass(form_class));
+          form.Left := ini_file.ReadInteger(SectionsListe.Strings[i], 'XPos', 0);
+          form.Top := ini_file.ReadInteger(SectionsListe.Strings[i], 'YPos', 0);
+          form.Width := ini_file.ReadInteger(SectionsListe.Strings[i], 'Width', 850);
+          form.Height := ini_file.ReadInteger(SectionsListe.Strings[i], 'Height', 350);
+          if form is TCanRxPrototypForm then
+            begin
+            ConfigList.Clear;
+            ini_file.ReadSectionValues(SectionsListe.Strings[i], ConfigList);
+            TCanRxPrototypForm(Form).LoadConfig(ConfigList);
+            end;
           end;
         end;
       end;
-    end;
+  except
+    result := FALSE;
+    end;        
 finally
   ConfigList.Free;
   SectionsListe.Free;
   ini_file.Free;
   end;
 SetSetup(1);
-result := 0;
 end;
 
 
-procedure TMainWin.SaveProject(filename: String);
+function TMainWin.SaveProject(filename: String): boolean;
 var i, j: integer;
     ini_file: TIniFile;
     IniSections: TStringList;
@@ -441,6 +452,7 @@ var i, j: integer;
     name: String;
 
 begin
+result := TRUE;
 if MDIChildCount > 0 then
   begin;
   for i := 0 to MDIChildCount-1 do
@@ -450,44 +462,48 @@ if MDIChildCount > 0 then
 ConfigList := TStringList.Create;
 ini_file := TIniFile.Create(filename);
 try
-  SaveSetup(ini_file);
-  ini_file.WriteInteger('MainWin', 'XPos', Left);
-  ini_file.WriteInteger('MainWin', 'YPos', Top);
-  ini_file.WriteInteger('MainWin', 'Width', Width);
-  ini_file.WriteInteger('MainWin', 'Height', Height);
+  try
+    SaveSetup(ini_file);
+    ini_file.WriteInteger('MainWin', 'XPos', Left);
+    ini_file.WriteInteger('MainWin', 'YPos', Top);
+    ini_file.WriteInteger('MainWin', 'Width', Width);
+    ini_file.WriteInteger('MainWin', 'Height', Height);
 
-  IniSections := TStringList.Create;
-  ini_file.ReadSections(IniSections);
-  for i := 0 to IniSections.Count - 1 do
-    begin
-    if AnsiStartsText('MDIWin', IniSections.Strings[i]) then
+    IniSections := TStringList.Create;
+    ini_file.ReadSections(IniSections);
+    for i := 0 to IniSections.Count - 1 do
       begin
-      ini_file.EraseSection(IniSections.Strings[i]);
-      end;
-    end;
-  IniSections.Free;
-  if MDIChildCount > 0 then
-    begin;
-    for i := 0 to MDIChildCount-1 do
-      begin
-      Form := self.MDIChildren[i];
-      ini_file.WriteString(format('MDIWin%u',[i]), 'Type', Form.ClassName);
-      ini_file.WriteInteger(format('MDIWin%u',[i]), 'XPos', Form.Left);
-      ini_file.WriteInteger(format('MDIWin%u',[i]), 'YPos', Form.Top);
-      ini_file.WriteInteger(format('MDIWin%u',[i]), 'Width', Form.Width);
-      ini_file.WriteInteger(format('MDIWin%u',[i]), 'Height', Form.Height);
-      if Form is TCanRxPrototypForm then
+      if AnsiStartsText('MDIWin', IniSections.Strings[i]) then
         begin
-        ConfigList.Clear;
-        TCanRxPrototypForm(Form).SaveConfig(ConfigList);
-        for j := 0 to ConfigList.Count - 1 do
-          begin;
-          name := ConfigList.Names[j];
-          ini_file.WriteString(format('MDIWin%u',[i]), name, ConfigList.Values[name]);
+        ini_file.EraseSection(IniSections.Strings[i]);
+        end;
+      end;
+    IniSections.Free;
+    if MDIChildCount > 0 then
+      begin;
+      for i := 0 to MDIChildCount-1 do
+        begin
+        Form := self.MDIChildren[i];
+        ini_file.WriteString(format('MDIWin%u',[i]), 'Type', Form.ClassName);
+        ini_file.WriteInteger(format('MDIWin%u',[i]), 'XPos', Form.Left);
+        ini_file.WriteInteger(format('MDIWin%u',[i]), 'YPos', Form.Top);
+        ini_file.WriteInteger(format('MDIWin%u',[i]), 'Width', Form.Width);
+        ini_file.WriteInteger(format('MDIWin%u',[i]), 'Height', Form.Height);
+        if Form is TCanRxPrototypForm then
+          begin
+          ConfigList.Clear;
+          TCanRxPrototypForm(Form).SaveConfig(ConfigList);
+          for j := 0 to ConfigList.Count - 1 do
+            begin;
+            name := ConfigList.Names[j];
+            ini_file.WriteString(format('MDIWin%u',[i]), name, ConfigList.Values[name]);
+            end;
           end;
         end;
       end;
-    end;
+  except
+    result := FALSE;
+    end;      
 finally
   ConfigList.Free;
   ini_file.Free;
@@ -515,11 +531,26 @@ result := SetListenOnly;
 end;
 
 
+procedure TMainWin.SetProjectName;
+begin;
+if ProjectFile = '' then
+  MainWin.Caption := 'CANcool - Kein Project geladen' 
+else
+  MainWin.Caption := 'CANcool - ' + ExtractFileName(ProjectFile); 
+end;
+
+
 procedure TMainWin.SetSetup(mode : Integer);
+var trace_clear: boolean;
+    max_clumps: Integer;
+    open_run: Integer;
 
 begin;
+trace_clear := FALSE;
+open_run := 0;
 if mode > 0 then
   begin;
+  trace_clear := TRUE;
   ComThreadTerminate;    // muss vor SyncThreadTerminate aufgerufen werden
   SyncThreadTerminate;
   if SetupData.Driver = 0 then
@@ -540,10 +571,24 @@ if mode > 0 then
     TinyCAN.CanExCreateFifo($80000000, 30000, TinyCanEvent, RX_EVENT, $FFFFFFFF);
     ComThread := TComThread.Create(self);
     SyncThread := TSyncThread.Create(self);
+    open_run := 2;
     end;
   end;
 if Assigned(CanRxWin) then
   begin
+  if CanRxWin.RxList.ClumpSize <> SetupData.RxDBufferSize then
+    trace_clear := TRUE;
+  if SetupData.RxDEnableDynamic then
+    max_clumps := SetupData.RxDLimit
+  else
+    max_clumps := 1;
+  if max_clumps <> CanRxWin.RxList.MaxClumps then
+    trace_clear := TRUE;    
+  if trace_clear then
+    begin;
+    CanRxWin.ExecuteCmd(RX_WIN_STOP_TRACE, nil);
+    CanRxWin.ExecuteCmd(RX_WIN_CLEAR, nil);
+    end;
   CanRxWin.RxList.ClumpSize := SetupData.RxDBufferSize;
   if SetupData.RxDEnableDynamic then
     CanRxWin.RxList.MaxClumps := SetupData.RxDLimit
@@ -555,9 +600,14 @@ if SetupData.ShowErrorMessages then
   TinyCan.OptionsStr := 'CanErrorMsgsEnable=1'
 else
   TinyCan.OptionsStr := 'CanErrorMsgsEnable=0';
+if (open_run = 0) and (LomCheckBtn.Down <> SetupData.ListenOnly) then  
+  open_run := 1;   
 LomCheckBtn.Down := SetupData.ListenOnly;
 TinyCan.CanSetOptions;
-ConnectHardware;
+if open_run = 2 then
+  ConnectHardware
+else if open_run = 1 then
+  SetListenOnly;
 RefreshStatusBar;
 end;
 
@@ -636,8 +686,8 @@ end;
 procedure TMainWin.TinyCANCanPnPEvent(Sender: TObject; index: Cardinal;
   status: Integer);
 begin
-if status > 0 then
-  ConnectHardware;
+{if TinyCan.CanExGetDeviceCount(1) > 0 then  // <*>
+  ConnectHardware;}
 RefreshStatusBar;
 end;
 
@@ -661,9 +711,16 @@ OpenDialog.FileName := ProjectFile;
 if OpenDialog.Execute then
   begin;
   ProjectFile := OpenDialog.FileName;
-  if length(ProjectFile) > 0 then
-    LoadProject(ProjectFile);
+  if ProjectFile <> '' then
+    begin;  
+    if not LoadProject(ProjectFile) then
+      begin;
+      MessageDlg('Projekt (' + ProjectFile + ') kann nicht geladen werden', mtError, [mbOk], 0);
+      ProjectFile := '';
+      end;
+    end;
   end;
+SetProjectName;  
 end;
 
 
@@ -674,9 +731,13 @@ SaveDialog.FileName := ProjectFile;
 if SaveDialog.Execute then
   begin;
   ProjectFile := SaveDialog.FileName;
-  if length(ProjectFile) > 0 then
-    SaveProject(ProjectFile);
+  if ProjectFile <> '' then
+    begin;
+    if not SaveProject(ProjectFile) then
+      MessageDlg('Projekt (' + ProjectFile + ') kann nicht gespeichert werden', mtError, [mbOk], 0);    
+    end;
   end;
+SetProjectName;
 end;
 
 
@@ -705,7 +766,8 @@ begin
 setup_win := TSetupForm.Create(self);
 i := setup_win.Execute;
 setup_win.Free;
-SetSetup(i);
+if i > -1 then
+  SetSetup(i);
 end;
 
 
@@ -753,8 +815,24 @@ end;
 
 
 procedure TMainWin.ProjectNewNmuClick(Sender: TObject);
+
 begin
 NewProject;
+ProjectFile := '';
+SaveDialog.FileName := '';
+if SaveDialog.Execute then
+  begin;
+  ProjectFile := SaveDialog.FileName;
+  if ProjectFile <> '' then
+    begin;
+    if not SaveProject(ProjectFile) then
+      begin;
+      MessageDlg('Projekt (' + ProjectFile + ') kann nicht gespeichert werden', mtError, [mbOk], 0);
+      ProjectFile := '';
+      end;
+    end;
+  end;
+SetProjectName;  
 end;
 
 
@@ -916,16 +994,31 @@ end;
 
 
 procedure TMainWin.SetStartStop;
+var clear_data: boolean;
 
 begin;
+clear_data := FALSE;
+if not Assigned(CanRxWin) then
+  exit;
 if DataRecord in [RecordStart, RecordOV] then
   begin;
   TraceStartStopBtn.Down := True;
   TraceStartStopBtn.ImageIndex := 10;
   TraceStartStopBtn.Caption := 'Stop';
   RxStartStopMnu.Caption := 'Aufzeichnung stoppen';
-  if Assigned(CanRxWin) then
-    CanRxWin.ExecuteCmd(RX_WIN_START_TRACE, nil);
+  if SetupData.DataClearMode = 0 then
+    clear_data := TRUE
+  else if SetupData.DataClearMode = 1 then
+    begin;
+    if CanRxWin.RxList.Count > 0 then
+      begin;
+      if MessageDlg('Trace Daten löschen ?', mtConfirmation, [mbYes,mbNo], 0) = mrYes then
+        clear_data := TRUE;
+      end;
+    end;      
+  if clear_data then 
+    CanRxWin.ExecuteCmd(RX_WIN_CLEAR, nil);  
+  CanRxWin.ExecuteCmd(RX_WIN_START_TRACE, nil);
   end
 else
   begin;
@@ -933,8 +1026,7 @@ else
   TraceStartStopBtn.ImageIndex := 9;
   TraceStartStopBtn.Caption := 'Start';
   RxStartStopMnu.Caption := 'Aufzeichnung starten';
-  if Assigned(CanRxWin) then
-    CanRxWin.ExecuteCmd(RX_WIN_STOP_TRACE, nil);
+  CanRxWin.ExecuteCmd(RX_WIN_STOP_TRACE, nil);
   end;
 end;
 
@@ -1094,7 +1186,7 @@ procedure TMainWin.RxCanUpdate;
 var i: DWORD;
     form: TForm;
 
-begin 
+begin
 if MDIChildCount > 0 then
   begin;
   for i := 0 to MDIChildCount-1 do

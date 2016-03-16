@@ -1,5 +1,5 @@
 { *********** TINY - CAN Treiber **************                          }
-{ Copyright (C) 2009 - 2015 Klaus Demlehner (klaus@mhs-elektronik.de)    }
+{ Copyright (C) 2009 - 2016 Klaus Demlehner (klaus@mhs-elektronik.de)    }
 {     www.mhs-elektronik.de                                              }
 {                                                                        }
 { This program is free software; you can redistribute it and/or modify   }
@@ -814,24 +814,24 @@ end;
 procedure TTinyCAN.SetCanSpeed(speed: TCanSpeed);
 
 begin;
-if speed <> FCanSpeed then
-  begin;
-  FCanSpeed := speed;
-  if not (csDesigning in ComponentState) then
-    CanSetSpeed(0, speed);
-  end;
+{if speed <> FCanSpeed then <*>
+  begin;}
+FCanSpeed := speed;
+if not (csDesigning in ComponentState) then
+  CanSetSpeed(0, speed);
+//  end;
 end;
 
 
 procedure TTinyCAN.SetEventMasks(value: TEventMasks);
 
 begin;
-if value <> FEventMasks then
-  begin;
-  FEventMasks := value;
-  if not (csDesigning in ComponentState) then
+{if value <> FEventMasks then <*>
+  begin;}
+FEventMasks := value;
+if not (csDesigning in ComponentState) then
     CanSetEvents(FEventMasks);
-  end;
+//  end;
 end;
 
 
