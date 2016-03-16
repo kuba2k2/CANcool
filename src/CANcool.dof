@@ -109,7 +109,7 @@ DebugCWD=
 IncludeVerInfo=1
 AutoIncBuild=0
 MajorVer=2
-MinorVer=1
+MinorVer=2
 Release=0
 Build=0
 Debug=0
@@ -122,13 +122,13 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=MHS-Elektronik GmbH & Co. KG
 FileDescription=CANcool
-FileVersion=2.1.0.0
+FileVersion=2.2.0.0
 InternalName=CANcool
 LegalCopyright=MHS-Elektronik GmbH & Co. KG
 LegalTrademarks=CANcool
 OriginalFilename=CANcool
 ProductName=CANcool
-ProductVersion=2.1.0.0
+ProductVersion=2.2.0.0
 Comments=
 [HistoryLists\hlUnitAliases]
 Count=1
