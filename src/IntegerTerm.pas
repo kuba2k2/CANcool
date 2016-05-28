@@ -4,7 +4,7 @@ interface
 
 {$WARN UNSAFE_TYPE OFF}
 {$WARN UNSAFE_CODE OFF}
-
+     
 uses SysUtils;
 
 type
@@ -24,11 +24,11 @@ type
     FehlerLaenge: integer;
     FehlerText: string;
     procedure FindeOperation(Formula, Op: string; pPos: pinteger; p: integer);
-    function  TermZerlegung(Formula: string; p: integer): integer;
+    function  TermZerlegung(Formula: string; p: integer): Extended;
     procedure SetFehlerMeldung(s: string; p: integer; l: integer);
   public
     { Public-Deklarationen }
-    function  TermLoesen(Formula: string; pVariablen: PVarArray): integer;
+    function TermLoesen(Formula: string; pVariablen: PVarArray): Extended;
     function GetFehler(FPos, FLaenge: pinteger): integer;
     function GetFehlerText: string;
   end;
@@ -42,19 +42,22 @@ const
 implementation
 
 constructor TIntTerm.Create;
+
 begin
-  pVari := nil;
-  FehlerPos := 0;
-  FehlerLaenge := 0;
-  FehlerText := '';
+pVari := nil;
+FehlerPos := 0;
+FehlerLaenge := 0;
+FehlerText := '';
 end;
 
-function TIntTerm.TermLoesen(Formula: string; pVariablen: PVarArray): integer;
+
+function TIntTerm.TermLoesen(Formula: string; pVariablen: PVarArray): Extended;
+
 begin
-  FehlerPos := 0;
-  FehlerText := '';
-  pVari := pVariablen;
-  result := TermZerlegung(Formula, 1);
+FehlerPos := 0;
+FehlerText := '';
+pVari := pVariablen;
+result := TermZerlegung(Formula, 1);
 end;
 
 // -----------------------------------------------------------------------------
@@ -114,91 +117,98 @@ end;
 // Term : String des Term der entschlüsselt werden soll
 // p : Zeichenposition im gesamt Term. Dient der Fehlerausgabe
 // -----------------------------------------------------------------------------
-function TIntTerm.TermZerlegung(Formula: string; p: integer): integer;
-var
-  i: integer;
-  n: integer;
-  o1: integer;
-  o2: integer;
-  TempStr: string;
+function TIntTerm.TermZerlegung(Formula: string; p: integer): Extended;
+var i: integer;
+    n: integer;
+    o1: Extended;
+    o2: Extended;
+    int_o1: int64;
+    int_o2: int64;
+    TempStr: string;
+
 begin
-  result := 0;
+result := 0;
 
-  if FehlerPos > 0 then
+if FehlerPos > 0 then
   begin
-    result := 1;
-    exit;
+  result := 1;
+  exit;
   end;
 
-  p := p + length(Formula) - length(TrimLeft(Formula));
-  Formula := trim(Formula);
+p := p + length(Formula) - length(TrimLeft(Formula));
+Formula := trim(Formula);
 
-  i := 0;
-  while (i <= high(OpStr)) do
+i := 0;
+while (i <= high(OpStr)) do
   begin
-    FindeOperation(Formula, OpStr[i], @n, p);
-    if n > 0 then
+  FindeOperation(Formula, OpStr[i], @n, p);
+  if n > 0 then
     begin
-      o1 := TermZerlegung(copy(Formula, 1, n-1), p);
-      o2 := TermZerlegung(copy(Formula, n+length(OpStr[i]), length(Formula)-n), p+n+length(OpStr[i])-1);
-      case i of
-        0: result := o1 + o2;
-        1: result := o1 - o2;
-        2: result := o1 * o2;
-        3: result := o1 div o2;
-        4: result := o1 shr o2;
-        5: result := o1 shl o2;
-        6: result := o1 and o2;
-        7: result := o1 or o2;
-        8: result := o1 xor o2;
-      end;
-      exit;
-    end;
-    inc(i);
-  end;
-
-  // Ist Term in Klammern
-  if Formula[1] = '(' then
-  begin
-    if Formula[length(Formula)] = ')' then
-    begin
-      result := TermZerlegung(trim(copy(Formula, 2, length(Formula)-2)), p+1);
-      exit;
-    end;
-  end;
-
-  // Auf Variable oder Funktion prüfen
-  if Formula[1] in ['a'..'z','A'..'Z','_'] then
-  begin
-    i := 2;
-    while ((i <= length(Formula)) and (Formula[1] in ['a'..'z','A'..'Z','_','0'..'9'])) do
-    begin
-      inc(i);
-    end;
-    TempStr := copy(Formula, 1, i-1);
-
-    // Auf Variablen prüfen
-    if assigned(pVari) then
-    begin
-      for n := low(pVari^) to high(pVari^) do
+    o1 := TermZerlegung(copy(Formula, 1, n-1), p);
+    o2 := TermZerlegung(copy(Formula, n+length(OpStr[i]), length(Formula)-n), p+n+length(OpStr[i])-1);
+    if i >= 4 then
       begin
-        if lowercase(pVari^[n].Name) = lowercase(TempStr) then
+      int_o1 := Trunc(o1);
+      int_o2 := Trunc(o2);
+      end;
+    case i of
+      0: result := o1 + o2;
+      1: result := o1 - o2;
+      2: result := o1 * o2;
+      3: result := o1 / o2;
+      4: result := int_o1 shr int_o2;
+      5: result := int_o1 shl int_o2;
+      6: result := int_o1 and int_o2;
+      7: result := int_o1 or int_o2;
+      8: result := int_o1 xor int_o2;
+      end;
+    exit;
+    end;
+  inc(i);
+  end;
+
+// Ist Term in Klammern
+if Formula[1] = '(' then
+  begin
+  if Formula[length(Formula)] = ')' then
+    begin
+    result := TermZerlegung(trim(copy(Formula, 2, length(Formula)-2)), p+1);
+    exit;
+    end;
+  end;
+
+// Auf Variable oder Funktion prüfen
+if Formula[1] in ['a'..'z','A'..'Z','_'] then
+  begin
+  i := 2;
+  while ((i <= length(Formula)) and (Formula[1] in ['a'..'z','A'..'Z','_','0'..'9'])) do
+    begin
+    inc(i);
+    end;
+  TempStr := copy(Formula, 1, i-1);
+
+  // Auf Variablen prüfen
+  if assigned(pVari) then
+    begin
+    for n := low(pVari^) to high(pVari^) do
+      begin
+      if lowercase(pVari^[n].Name) = lowercase(TempStr) then
         begin
-          result := pVari^[n].Wert;
-          exit;
+        result := pVari^[n].Wert;
+        exit;
         end;
       end;
     end;
-    SetFehlerMeldung('Syntax Fehler, Variable "'+TempStr+'" unbekannt.', p, length(TempStr));
+  SetFehlerMeldung('Syntax Fehler, Variable "'+TempStr+'" unbekannt.', p, length(TempStr));
 
-    // Auf Funktionen prüfen (z.B. Not, sin, cos)
+  // Auf Funktionen prüfen (z.B. Not, sin, cos)
   end;
 
   // Wenn Term eine Zahl ist
-  if Formula[1] in ['0'..'9'] then
+if Formula[1] in ['0'..'9', '.'] then
   begin
     try
-      result := StrToInt(Formula);
+      result := StrToFloat(Formula);
     except
       SetFehlerMeldung('Syntax Fehler, "'+Formula+'" ist keine gültige Zahl.', p, length(Formula));
     end;
@@ -207,26 +217,32 @@ begin
 end;
 // ^^ TermZerlegung ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+
 procedure TIntTerm.SetFehlerMeldung(s: string; p: integer; l: integer);
+
 begin
-  FehlerPos := p;
-  FehlerLaenge := l;
-  FehlerText := s;
-  raise Exception.Create(s);
+FehlerPos := p;
+FehlerLaenge := l;
+FehlerText := s;
+raise Exception.Create(s);
 end;
+
 
 function TIntTerm.GetFehler(FPos: pinteger; FLaenge: pinteger): integer;
+
 begin
-  result := 0;
-  FPos^ := FehlerPos;
-  FLaenge^ := FehlerLaenge;
-  if FehlerPos > 0 then
-    result := -1;
+result := 0;
+FPos^ := FehlerPos;
+FLaenge^ := FehlerLaenge;
+if FehlerPos > 0 then
+  result := -1;
 end;
 
+
 function TIntTerm.GetFehlerText(): string;
+
 begin
-  result := FehlerText;
+result := FehlerText;
 end;
 
 end.
