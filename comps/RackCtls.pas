@@ -3,7 +3,7 @@ unit RackCtls;
 { RackControls:
   TLEDButton, TButtonPanel, TScrewPanel, TLEDDisplay, TLEDMeter
 
-  (C)opyright 2004 Version 1.20
+  (C)opyright 2004 - 2016 Version 1.30
   Autor : Simon Reinhardt
   eMail : reinhardt@picsoft.de
   Internet : http://www.picsoft.de
@@ -19,7 +19,10 @@ unit RackCtls;
   Änderungen, die bei LEDDisplay nachfolgende Nullen bei LeadingZeros=False doch zeichnet
   Ergänzt von Wolfgang Kleinrath
 
-  Eigenschaft FSingleLED ergänzt von U. Conrad }
+  Eigenschaft FSingleLED ergänzt von U. Conrad
+
+  Zeit 0 und negative Zahlen an
+  }
 
 interface
 
@@ -319,7 +322,7 @@ type
     FColorBackGround,
     FColorLED        : TColor;
     FDecSeparator    : TDecSeparator;
-    FDigit           : array [0..9] of TBitmap;
+    FDigit           : array [0..10] of TBitmap;
     FDigitHeight     : integer;
     FDigitShapeColor : TColor;
     FDigitWidth      : integer;
@@ -330,7 +333,7 @@ type
     FLineWidth,
     FNumDigits       : integer;
     FLeadingZeros    : boolean;
-    FSegCl           : array [0..9, 1..7] of TColor;
+    FSegCl           : array [0..10, 1..7] of TColor;
     FSegmentStyle    : TSegmentStyle;
     FValue           : extended;
 
@@ -1748,9 +1751,10 @@ begin
   AssignColors (7,true,false,true,false,false,true,false);
   AssignColors (8,true,true,true,true,true,true,true);
   AssignColors (9,true,true,true,true,false,true,true);
+  AssignColors (10,false,false,false,true,false,false,false);
 
   { Bitmap erstellen }
-  for c := 0 to 9 do begin
+  for c := 0 to 10 do begin
     FDigit[c].free;
     FDigit[c] := TBitmap.create;
     FDigit[c].width := FDigitWidth;
@@ -1872,8 +1876,15 @@ begin
     Pen.Color:=FColorLED;
     { Bitmaps und DecSeperator zeichnen }
     for DigitNum:=1 to FNumDigits do begin
-      { nachfolgende Nullen müssen gezeichnet werden! }
-      if FLeadingZeros or (StrToInt(outText[DigitNum])<>0) or ANZeroDigit then begin
+      if DigitNum = FNumDigits then
+        ANZeroDigit:=True;
+      if outText[DigitNum] = '-' then
+        begin;
+        { nachfolgende Nullen müssen gezeichnet werden! }
+        Draw(DigitLeft, DigitTop, FDigit[10]);
+        ANZeroDigit:=True; { spätestens jetzt isse da... }
+        end
+      else if FLeadingZeros or (StrToInt(outText[DigitNum])<>0) or ANZeroDigit then begin
         Draw(DigitLeft, DigitTop, FDigit[StrToInt(outText[DigitNum])]);
         ANZeroDigit:=True; { spätestens jetzt isse da... }
       end;
