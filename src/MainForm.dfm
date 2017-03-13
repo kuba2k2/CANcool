@@ -1,6 +1,6 @@
 object MainWin: TMainWin
-  Left = 228
-  Top = 242
+  Left = 308
+  Top = 141
   Width = 1100
   Height = 700
   Caption = 'CANcool'
@@ -4319,7 +4319,7 @@ object MainWin: TMainWin
   object AboutDialog: TXLAboutDialog
     Company = 'MHS-Elektronik GmbH && Co. KG'
     ProductName = 'CANcool'
-    Version = '2.20'
+    Version = '2.21'
     Copyright = 'Copyright (c) 2012 - 2016'
     URL = 'www.mhs-elektronik.de'
     EMail = 'info@mhs-elektronik.de'

@@ -679,6 +679,14 @@ if DrvStatus >= DRV_STATUS_CAN_OPEN then
 DrvStatus := device_status.DrvStatus;
 CanStatus := device_status.CanStatus;
 BusFailure := device_status.BusFailure;
+if DrvStatus < DRV_STATUS_CAN_RUN then
+  begin
+  if DataRecord in [RecordStart, RecordOV] then
+    begin
+    DataRecord := RecordStop;
+    SetStartStop;
+    end;
+  end;
 RefreshStatusBar;
 end;
 
@@ -1006,6 +1014,10 @@ if DataRecord in [RecordStart, RecordOV] then
   TraceStartStopBtn.ImageIndex := 10;
   TraceStartStopBtn.Caption := 'Stop';
   RxStartStopMnu.Caption := 'Aufzeichnung stoppen';
+  // Setup sperren
+  SetupBtn.Enabled := False;
+  Einstellungen1.Enabled := False;
+  ConnectMnu.Enabled := False;
   if SetupData.DataClearMode = 0 then
     clear_data := TRUE
   else if SetupData.DataClearMode = 1 then
@@ -1015,13 +1027,17 @@ if DataRecord in [RecordStart, RecordOV] then
       if MessageDlg('Trace Daten löschen ?', mtConfirmation, [mbYes,mbNo], 0) = mrYes then
         clear_data := TRUE;
       end;
-    end;      
-  if clear_data then 
-    CanRxWin.ExecuteCmd(RX_WIN_CLEAR, nil);  
+    end;
+  if clear_data then
+    CanRxWin.ExecuteCmd(RX_WIN_CLEAR, nil);
   CanRxWin.ExecuteCmd(RX_WIN_START_TRACE, nil);
   end
 else
   begin;
+  // Setup sperren
+  SetupBtn.Enabled := True;
+  Einstellungen1.Enabled := True;
+  ConnectMnu.Enabled := True;
   TraceStartStopBtn.Down := False;
   TraceStartStopBtn.ImageIndex := 9;
   TraceStartStopBtn.Caption := 'Start';
