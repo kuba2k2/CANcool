@@ -1,5 +1,5 @@
 { *********** TINY - CAN Treiber **************                          }
-{ Copyright (C) 2009 - 2016 Klaus Demlehner (klaus@mhs-elektronik.de)    }
+{ Copyright (C) 2009 - 2019 Klaus Demlehner (klaus@mhs-elektronik.de)    }
 {     www.mhs-elektronik.de                                              }
 {                                                                        }
 { This program is free software; you can redistribute it and/or modify   }
@@ -33,6 +33,15 @@ const
   CM_CAN_PNP_EVENT = WM_USER + 100;
   CM_CAN_STATUS_EVENT = WM_USER + 101;
   CM_CAN_RXD_EVENT = WM_USER + 102;
+  // ***** CAN-FD Flags
+  FlagCanFdTxD: Word    = ($0001);  // TxD -> 1 = Tx CAN Nachricht, 0 = Rx CAN Nachricht
+  FlagCanFdError: Word  = ($0002);  // Error -> 1 = CAN Bus Fehler Nachricht
+  FlagCanFdRTR: Word    = ($0004);  // Remote Transmition Request bit -> Kennzeichnet eine RTR Nachricht
+  FlagCanFdEFF: Word    = ($0008);  // Extended Frame Format bit -> 1 = 29 Bit Id's, 0 = 11 Bit Id's
+  FlagCanFdFD: Word     = ($0010);  // CAN-FD Frame
+  FlagCanFdBRS: Word    = ($0020);  // Bit Rate Switch
+  FlagCanFdOV: Word     = ($0080);  // FIFO Overrun
+  FlagCanFdFilHit: Word = ($8000);  // FilHit -> 1 = Filter Hit
 
   FlagsCanLength: DWORD = ($0000000F);
   FlagsCanTxD: DWORD    = ($00000010);
@@ -80,6 +89,19 @@ const
 
   MHS_EVENT_TERMINATE: DWORD             = ($80000000);
 
+  TCAN_LOG_MESSAGE: DWORD                = ($00000001);
+  TCAN_LOG_STATUS: DWORD                 = ($00000002);
+  TCAN_LOG_RX_MSG: DWORD                 = ($00000004);
+  TCAN_LOG_TX_MSG: DWORD                 = ($00000008);
+  TCAN_LOG_API_CALL: DWORD               = ($00000010);
+  TCAN_LOG_ERROR: DWORD                  = ($00000020);
+  TCAN_LOG_WARN: DWORD                   = ($00000040);
+  TCAN_LOG_ERR_MSG: DWORD                = ($00000080);
+  TCAN_LOG_OV_MSG: DWORD                 = ($00000100);
+  TCAN_LOG_DEBUG: DWORD                  = ($08000000);
+  TCAN_LOG_WITH_TIME: DWORD              = ($40000000);
+  TCAN_LOG_DISABLE_SYNC: DWORD           = ($80000000);
+  
   {#define DEV_LIST_SHOW_TCAN_ONLY 0x01
   #define DEV_LIST_SHOW_UNCONNECT 0x02
 
@@ -88,7 +110,8 @@ const
   #define CAN_FEATURE_TX_ACK       0x0004  // TX ACK (Gesendete Nachrichten bestätigen)
   #define CAN_FEATURE_HW_TIMESTAMP 0x8000  // Hardware Time Stamp}
   
-  CanSpeedTab: array[0..8] of Word = (10,    // 10 kBit/s
+  CanSpeedTab: array[0..9] of Word = (0,      // Cusom Speed
+                                      10,    // 10 kBit/s
                                       20,    // 20 kBit/s
                                       50,    // 50 kBit/s
                                       100,   // 100 kBit/s
@@ -98,6 +121,15 @@ const
                                       800,   // 800 kBit/s
                                       1000); // 1 MBit/s
 
+   CanFdSpeedTab: array[0..7] of Word = (0,      // Cusom Speed
+                                         250,    // 250 kBit/s
+                                         500,    // 500 kBit/s                                         
+                                         1000,   // 1 MBit/s
+                                         1500,   // 1,5 MBit/s
+                                         2000,   // 2 MBit/s
+                                         3000,   // 3 MBit/s
+                                         4000);  // 4 MBit/s
+   
    BaudRateTab: array[0..18] of DWord = (0,
                                          4800,
                                          9600,
@@ -153,7 +185,10 @@ type
 EDllLoadError = class(Exception);
 
 // CAN Übertragungsgeschwindigkeit
-TCanSpeed = (CAN_10K_BIT, CAN_20K_BIT, CAN_50K_BIT, CAN_100K_BIT, CAN_125K_BIT,
+TCanFdSpeed = (FD_CUSTOM_SPEED, FD_250K_BIT, FD_500K_BIT, FD_1M_BIT, FD_1M5_BIT, FD_2M_BIT, FD_3M_BIT,
+               FD_4M_BIT);
+               
+TCanSpeed = (CAN_CUSTOM_SPEED,CAN_10K_BIT, CAN_20K_BIT, CAN_50K_BIT, CAN_100K_BIT, CAN_125K_BIT,
              CAN_250K_BIT, CAN_500K_BIT, CAN_800K_BIT, CAN_1M_BIT);
 
 TSerialBaudRate = (SER_AUTO_BAUD, SER_4800_BAUD, SER_9600_BAUD, SER_10k4_BAUD, 
@@ -166,7 +201,9 @@ TEventMask = (PNP_CHANGE_EVENT, STATUS_CHANGE_EVENT, RX_FILTER_MESSAGES_EVENT,
               RX_MESSAGES_EVENT);
 TEventMasks = set of TEventMask;
 TInterfaceType = (INTERFACE_USB, INTERFACE_SERIEL);
-TLogFlag = (LOG_F0, LOG_F1, LOG_F2, LOG_F3, LOG_F4, LOG_F5, LOG_F6, LOG_F7);
+
+TLogFlag = (LOG_MESSAGE, LOG_STATUS, LOG_RX_MSG, LOG_TX_MSG, LOG_API_CALL, LOG_ERROR, LOG_WARN,
+            LOG_ERR_MSG, LOG_OV_MSG, LOG_DEBUG, LOG_WITH_TIME, LOG_DISABLE_SYNC); 
 TLogFlags = set of TLogFlag;
 
 
@@ -243,6 +280,28 @@ TCanMsg = packed record
  PCanMsg = ^TCanMsg;
 
 {/******************************************/}
+{/*        CAN-FD Message Type             */}
+{/******************************************/}
+TCanFdData = packed record
+  case Integer of
+    0: (Chars: array[0..63] of Char);
+    1: (Bytes: array[0..63] of Byte);
+    2: (Words: array[0..31] of Word);
+    3: (Longs: array[0..15] of DWORD);
+  end;
+PCanFdData = ^TCanFdData;
+
+TCanFdMsg = packed record
+  Id: DWORD;
+  Source: Byte;
+  Length: Byte;
+  Flags: Word;
+  Data: TCanFdData;
+  Time: TCanTime;
+  end;
+ PCanFdMsg = ^TCanFdMsg;  
+
+{/******************************************/}
 {/*         CAN Message Filter Type        */}
 {/******************************************/}
 TMsgFilter = packed record
@@ -281,6 +340,8 @@ TModulFeatures = packed record
                              //  Bit  0 -> Silent Mode (LOM = Listen only Mode)
                              //       1 -> Automatic Retransmission disable
                              //       2 -> TX ACK (Gesendete Nachrichten bestätigen)
+                             //       3 -> Error Messages Support
+                             //       8 -> CAN-FD Hardware
                              //      15 -> Hardware Time Stamp
   CanChannelsCount: DWORD;   // Anzahl der CAN Schnittstellen, reserviert für
                              // zukünftige Module mit mehr als einer Schnittstelle
@@ -361,6 +422,7 @@ TF_CanReceiveClear = procedure(index: DWORD); stdcall;
 TF_CanReceiveGetCount = function(index: DWORD): DWORD; stdcall;
 
 TF_CanSetSpeed = function(index: DWORD; speed: Word): Integer; stdcall;
+TF_CanSetSpeedUser = function(index: DWORD; value: DWORD): Integer; stdcall;
 TF_CanDrvInfo = function: PAnsiChar; stdcall;
 TF_CanDrvHwInfo = function(index: DWORD): PAnsiChar; stdcall;
 TF_CanSetFilter = function(index: DWORD; msg_filter: PMsgFilter): Integer; stdcall;
@@ -410,6 +472,9 @@ TF_CanExGetAsUByte = function(index: DWORD; name: PAnsiChar; value: PByte): Inte
 TF_CanExGetAsUWord = function(index: DWORD; name: PAnsiChar; value: PWORD): Integer; stdcall;
 TF_CanExGetAsULong = function(index: DWORD; name: PAnsiChar; value: PDWORD): Integer; stdcall;
 TF_CanExGetAsStringCopy = function(index: DWORD; name: PAnsiChar; dest: PAnsiChar; dest_size: PDWORD): Integer; stdcall;
+// **** CAN-FD
+TF_CanFdTransmit = function(index: DWORD; msg: PCanFdMsg; count: Integer): Integer; stdcall;
+TF_CanFdReceive = function(index: DWORD; msg: PCanFdMsg; count: Integer): Integer; stdcall;
 
 TOnCanPnPEvent = procedure(Sender: TObject; index: DWORD; status: Integer) of Object;
 TOnCanStatusEvent = procedure(Sender: TObject; index: DWORD; device_status: TDeviceStatus) of Object;
@@ -417,11 +482,17 @@ TOnCanRxDEvent = procedure(Sender: TObject; index: DWORD; msg: PCanMsg; count: I
 
 TTinyCAN = class(TComponent)
   private
+    FCanFifoOvClear: Boolean;
+    FCanFifoOvMessages: Boolean;
+    FFdMode: Boolean;
     FExMode: Boolean;
     FTreiberName: String;
     FPort: Integer;
     FBaudRate: TSerialBaudRate;
     FCanSpeed: TCANSpeed;
+    FCanSpeedBtr: DWord;
+    FCanFdSpeed: TCanFdSpeed;
+    FCanFdDbtr: DWord; 
     FEventMasks: TEventMasks;
     FInterfaceType: TInterfaceType;
     FPnPEnable: boolean;
@@ -437,12 +508,15 @@ TTinyCAN = class(TComponent)
     FInitParameterStr: String;
     FOptionsStr: String;
     FOpenStr: String;
-    function CanInitDriver_Int(ex_mode: boolean): Integer;
+    function CanInitDriver_Int(ex_mode: boolean; fd_mode: boolean): Integer;
     function GetLogFlags: DWORD;
     function TestApi(name: String): Boolean;
     function RegReadStringEntry(path, entry: String): String;
     function GetApiDriverWithPath(driver_file: String): String;
     procedure SetCanSpeed(speed: TCanSpeed);
+    procedure SetCanSpeedBtr(btr: DWord);
+    procedure SetCanFdSpeed(speed: TCanFdSpeed);
+    procedure SetCanFdDbtr(dbtr: DWord);
     procedure SetEventMasks(value: TEventMasks);
     procedure WndProc(var msg : TMessage);
   public
@@ -469,6 +543,8 @@ TTinyCAN = class(TComponent)
     function CanReceiveGetCount(index: DWORD): DWORD;
 
     function CanSetSpeed(index: DWORD; speed: TCanSpeed): Integer;
+    function CanSetSpeedUser(index: DWORD; btr: DWord): Integer;
+    function CanSetFdSpeed(index: DWORD; fd_speed: TCanFdSpeed; dbtr: DWORD): Integer;
     function CanDrvInfo: PAnsiChar;
     function CanDrvHwInfo(index: DWORD): PAnsiChar;
     function CanSetFilter(index: DWORD; msg_filter: PMsgFilter): Integer;
@@ -494,7 +570,7 @@ TTinyCAN = class(TComponent)
     function CanExCreateEvent:Pointer;
     function CanExSetObjEvent(index: DWORD; source: DWORD; event_obj: Pointer; event: DWORD): Integer;
     procedure CanExSetEvent(event_obj: Pointer; event: DWORD);
-    procedure CanExSetEventAll(event: DWORD); 
+    procedure CanExSetEventAll(event: DWORD);
     procedure CanExResetEvent(event_obj: Pointer; event: DWORD);
     function CanExWaitForEvent(event_obj: Pointer; timeout: DWORD): DWORD;
     
@@ -514,16 +590,25 @@ TTinyCAN = class(TComponent)
     function CanExGetAsUWord(index: DWORD; name: String; var value: WORD): Integer;      
     function CanExGetAsULong(index: DWORD; name: String; var value: DWORD): Integer;     
     function CanExGetAsString(index: DWORD; name: String; var str: String): Integer;  
+    // **** CAN-FD
+    function CanFdTransmit(index: DWORD; msg: PCanFdMsg; count: Integer): Integer;
+    function CanFdReceive(index: DWORD; msg: PCanFdMsg; count: Integer): Integer;
   
     function LoadDriver: Integer;
     procedure DownDriver;
   published
     { Published-Deklarationen }
+    property CanFifoOvClear: Boolean read FCanFifoOvClear write FCanFifoOvClear default FALSE;
+    property CanFifoOvMessages: Boolean read FCanFifoOvMessages write FCanFifoOvMessages default FALSE;
+    property FdMode: Boolean read FFdMode write FFdMode default FALSE;
     property ExMode: Boolean read FExMode write FExMode default FALSE;
     property TreiberName: String read FTreiberName write FTreiberName;
     property Port: Integer read FPort write FPort default 0;
     property BaudRate: TSerialBaudRate read FBaudRate write FBaudRate default SER_921k6_BAUD;
     property CanSpeed: TCanSpeed read FCanSpeed write SetCanSpeed default CAN_125K_BIT;
+    property CanSpeedBtr: DWord read FCanSpeedBtr write SetCanSpeedBtr default 0;
+    property CanFdSpeed: TCanFdSpeed read FCanFdSpeed write SetCanFdSpeed default FD_1M_BIT;
+    property CanFdDbtr: DWord read FCanFdDbtr write SetCanFdDbtr default 0;
     property EventMasks: TEventMasks read FEventMasks write SetEventMasks default [];
     property InterfaceType: TInterfaceType read FInterfaceType write FInterfaceType default INTERFACE_USB;
     property PnPEnable: boolean read FPnPEnable write FPnPEnable default true;
@@ -572,6 +657,7 @@ var
   pmCanReceiveClear: TF_CanReceiveClear = nil;
   pmCanReceiveGetCount: TF_CanReceiveGetCount = nil;
   pmCanSetSpeed: TF_CanSetSpeed = nil;
+  pmCanSetSpeedUser: TF_CanSetSpeedUser = nil;
   pmCanDrvInfo: TF_CanDrvInfo = nil;
   pmCanDrvHwInfo: TF_CanDrvHwInfo = nil;
   pmCanSetFilter: TF_CanSetFilter = nil;
@@ -613,6 +699,9 @@ var
   pmCanExGetAsUWord: TF_CanExGetAsUWord = nil; 
   pmCanExGetAsULong: TF_CanExGetAsULong = nil; 
   pmCanExGetAsStringCopy: TF_CanExGetAsStringCopy = nil;
+  // **** CAN-FD
+  pmCanFdTransmit: TF_CanFdTransmit = nil;
+  pmCanFdReceive: TF_CanFdReceive = nil;
 
   FIndex: DWORD;
   FPnPStatus: Integer;
@@ -814,12 +903,36 @@ end;
 procedure TTinyCAN.SetCanSpeed(speed: TCanSpeed);
 
 begin;
-{if speed <> FCanSpeed then <*>
-  begin;}
 FCanSpeed := speed;
 if not (csDesigning in ComponentState) then
   CanSetSpeed(0, speed);
-//  end;
+end;
+
+
+procedure TTinyCAN.SetCanSpeedBtr(btr: DWord);
+
+begin;
+FCanSpeedBtr := btr;
+if not (csDesigning in ComponentState) then
+  CanSetSpeedUser(0, btr);
+end;
+
+
+procedure TTinyCAN.SetCanFdSpeed(speed: TCanFdSpeed);
+
+begin;
+FCanFdSpeed := speed;
+if not (csDesigning in ComponentState) then
+  CanSetFdSpeed(0, speed, FCanFdDBtr);  
+end;
+
+
+procedure TTinyCAN.SetCanFdDbtr(dbtr: DWord);
+
+begin;
+FCanFdDbtr := dbtr;
+if not (csDesigning in ComponentState) then
+  CanSetFdSpeed(0, FCanFdSpeed, dbtr);
 end;
 
 
@@ -838,30 +951,38 @@ end;
 function TTinyCan.GetLogFlags: DWORD;
 
 begin
-result := 0;
-if LOG_F0 in FLogFlags then
-  result := result or $01;
-if LOG_F1 in FLogFlags then
-  result := result or $02;
-if LOG_F2 in FLogFlags then
-  result := result or $04;
-if LOG_F3 in FLogFlags then
-  result := result or $08;
-if LOG_F4 in FLogFlags then
-  result := result or $10;
-if LOG_F5 in FLogFlags then
-  result := result or $20;
-if LOG_F6 in FLogFlags then
-  result := result or $40;
-if LOG_F7 in FLogFlags then
-  result := result or $80;
+result := 0; 
+if LOG_MESSAGE in FLogFlags then            
+  result := result or TCAN_LOG_MESSAGE;
+if LOG_STATUS in FLogFlags then  
+  result := result or TCAN_LOG_STATUS;
+if LOG_RX_MSG in FLogFlags then      
+  result := result or TCAN_LOG_RX_MSG;
+if LOG_TX_MSG in FLogFlags then        
+  result := result or TCAN_LOG_TX_MSG;
+if LOG_API_CALL in FLogFlags then        
+  result := result or TCAN_LOG_API_CALL;
+if LOG_ERROR in FLogFlags then      
+  result := result or TCAN_LOG_ERROR;
+if LOG_WARN in FLogFlags then         
+  result := result or TCAN_LOG_WARN;
+if LOG_WARN in FLogFlags then          
+  result := result or TCAN_LOG_ERR_MSG;
+if LOG_OV_MSG in FLogFlags then       
+  result := result or TCAN_LOG_OV_MSG;
+if LOG_DEBUG in FLogFlags then        
+  result := result or TCAN_LOG_DEBUG;
+if LOG_WITH_TIME in FLogFlags then         
+  result := result or TCAN_LOG_WITH_TIME;
+if LOG_DISABLE_SYNC in FLogFlags then     
+  result := result or TCAN_LOG_DISABLE_SYNC;
 end;
 
 
 {**************************************************************}
 {* Treiber Funktionen                                         *}
 {**************************************************************}
-function TTinyCAN.CanInitDriver_Int(ex_mode: boolean): Integer;
+function TTinyCAN.CanInitDriver_Int(ex_mode: boolean; fd_mode: boolean): Integer;
 var Str: String;
 
 begin;
@@ -881,8 +1002,19 @@ if length(FLogFile) > 0 then
   end; 
 if length(FInitParameterStr) > 0 then
   Str := Str + ';' + FInitParameterStr;
+if FCanFifoOvClear then
+  begin;
+  if FCanFifoOvMessages then
+    Str := Str + ';FifoOvMode=0x0101'
+  else
+    Str := Str + ';FifoOvMode=0x8101'  
+  end
+else
+  Str := Str + ';FifoOvMode=0x0000';    
 if ex_mode then
   begin
+  if fd_mode then
+    Str := Str + ';FdMode=1'; 
   if Assigned(pmCanExInitDriver) then
     result := pmCanExInitDriver(PAnsiChar(AnsiString(Str)));
   end
@@ -897,14 +1029,14 @@ end;
 function TTinyCAN.CanInitDriver: Integer;
 
 begin;
-result := CanInitDriver_Int(FALSE);
+result := CanInitDriver_Int(FALSE, FALSE);
 end;
 
 
 function TTinyCAN.CanExInitDriver(options: PAnsiChar): Integer;  
 
 begin;
-result := CanInitDriver_Int(TRUE);
+result := CanInitDriver_Int(TRUE, FFdMode);
 end;
 
 
@@ -1127,6 +1259,37 @@ if (DrvDLLWnd <> 0) and Assigned(pmCanSetSpeed) then
   begin;
   InterlockedIncrement(DrvRefCounter);
   result := pmCanSetSpeed(index, speed_value);
+  InterlockedDecrement(DrvRefCounter);
+  end;
+end;
+
+
+function TTinyCAN.CanSetSpeedUser(index: DWORD; btr: DWord): Integer;
+
+begin;
+result := -1;
+if (DrvDLLWnd <> 0) and Assigned(pmCanSetSpeedUser) then
+  begin;
+  InterlockedIncrement(DrvRefCounter);
+  result := pmCanSetSpeedUser(index, btr);
+  InterlockedDecrement(DrvRefCounter);
+  end;
+end;
+
+
+function TTinyCAN.CanSetFdSpeed(index: DWORD; fd_speed: TCanFdSpeed; dbtr: DWORD): Integer;
+var speed_value: Word;
+
+begin;
+result := -1;
+speed_value := CanFdSpeedTab[ord(fd_speed)];
+if (DrvDLLWnd <> 0) and Assigned(pmCanExSetAsUWord) and Assigned(pmCanExSetAsULong) then
+  begin;
+  InterlockedIncrement(DrvRefCounter);
+  if speed_value > 0 then
+    result := pmCanExSetAsUWord(index, PAnsiChar(AnsiString('CanDSpeed1')), speed_value)
+  else
+    result := pmCanExSetAsULong(index, PAnsiChar(AnsiString('CanDSpeed1User')), dbtr);  
   InterlockedDecrement(DrvRefCounter);
   end;
 end;
@@ -1626,7 +1789,7 @@ if (DrvDLLWnd <> 0) and Assigned(pmCanExGetAsUByte) then
   result := pmCanExGetAsUByte(index, PAnsiChar(AnsiString(name)), @read_value);
   InterlockedDecrement(DrvRefCounter);
   end;
-value := read_value;  
+value := read_value;
 end;
 
 
@@ -1677,6 +1840,33 @@ if (DrvDLLWnd <> 0) and Assigned(pmCanExGetAsString) then
 end;
 
 
+// **** CAN-FD
+function TTinyCAN.CanFdTransmit(index: DWORD; msg: PCanFdMsg; count: Integer): Integer;
+
+begin;
+result := -1;
+if (DrvDLLWnd <> 0) and Assigned(pmCanFdTransmit) then
+  begin;
+  InterlockedIncrement(DrvRefCounter);
+  result := pmCanFdTransmit(index, msg, count);
+  InterlockedDecrement(DrvRefCounter);
+  end;
+end;
+
+
+function TTinyCAN.CanFdReceive(index: DWORD; msg: PCanFdMsg; count: Integer): Integer;
+
+begin;
+result := -1;
+if (DrvDLLWnd <> 0) and Assigned(pmCanFdReceive) then
+  begin;
+  InterlockedIncrement(DrvRefCounter);
+  result := pmCanFdReceive(index, msg, count);
+  InterlockedDecrement(DrvRefCounter);
+  end;
+end;
+
+
 {**************************************************************}
 {* DLL Treiber laden                                          *}
 {**************************************************************}
@@ -1703,6 +1893,7 @@ try
   pmCanReceiveClear := GetProcAddress(DrvDLLWnd, 'CanReceiveClear');
   pmCanReceiveGetCount := GetProcAddress(DrvDLLWnd, 'CanReceiveGetCount');
   pmCanSetSpeed := GetProcAddress(DrvDLLWnd, 'CanSetSpeed');
+  pmCanSetSpeedUser := GetProcAddress(DrvDLLWnd, 'CanSetSpeedUser');
   pmCanDrvInfo := GetProcAddress(DrvDLLWnd, 'CanDrvInfo');
   pmCanDrvHwInfo := GetProcAddress(DrvDLLWnd, 'CanDrvHwInfo');
   pmCanSetFilter := GetProcAddress(DrvDLLWnd, 'CanSetFilter');
@@ -1745,6 +1936,9 @@ try
   pmCanExGetAsUWord := GetProcAddress(DrvDLLWnd, 'CanExGetAsUWord'); 
   pmCanExGetAsULong := GetProcAddress(DrvDLLWnd, 'CanExGetAsULong');
   pmCanExGetAsStringCopy := GetProcAddress(DrvDLLWnd, 'CanExGetAsStringCopy');
+  // **** CAN-FD
+  pmCanFdTransmit := GetProcAddress(DrvDLLWnd, 'CanFdTransmit');
+  pmCanFdReceive := GetProcAddress(DrvDLLWnd, 'CanFdReceive');
     
   if @pmCanInitDriver = nil then raise EDllLoadError.create('');
   if @pmCanDownDriver = nil then raise EDllLoadError.create('');
@@ -1760,6 +1954,7 @@ try
   if @pmCanReceiveClear = nil then raise EDllLoadError.create('');
   if @pmCanReceiveGetCount = nil then raise EDllLoadError.create('');
   if @pmCanSetSpeed = nil then raise EDllLoadError.create('');
+  if @pmCanSetSpeedUser = nil then raise EDllLoadError.create('');
   if @pmCanDrvInfo = nil then raise EDllLoadError.create('');
   if @pmCanDrvHwInfo = nil then raise EDllLoadError.create('');
   if @pmCanSetFilter = nil then raise EDllLoadError.create('');
@@ -1802,8 +1997,11 @@ try
   if @pmCanExGetAsUWord = nil then raise EDllLoadError.create(''); 
   if @pmCanExGetAsULong = nil then raise EDllLoadError.create(''); 
   if @pmCanExGetAsStringCopy = nil then raise EDllLoadError.create('');
+  // **** CAN-FD
+  if @pmCanFdTransmit = nil then raise EDllLoadError.create('');
+  if @pmCanFdReceive = nil then raise EDllLoadError.create('');
   // Treiber Initialisieren
-  if CanInitDriver_Int(FExMode) <> 0 then raise EDllLoadError.create('');
+  if CanInitDriver_Int(FExMode, FFdMode) <> 0 then raise EDllLoadError.create('');
   // Callback-Funktionen setzen
   CanSetPnPEventCallback(@CanPnPEventCallback);
   CanSetStatusEventCallback(@CanStatusEventCallback);
@@ -1811,6 +2009,7 @@ try
   // Events freigeben
   CanSetEvents(FEventMasks);
   CanSetSpeed(0, FCanSpeed);
+  // <*> CAN-FD / BTR setup ?
   // Treiber Optionen setzen
   CanSetOptions;
   if not FExMode then
@@ -1850,6 +2049,7 @@ pmCanReceive := nil;
 pmCanReceiveClear := nil;
 pmCanReceiveGetCount := nil;
 pmCanSetSpeed := nil;
+pmCanSetSpeedUser := nil;
 pmCanDrvInfo := nil;
 pmCanDrvHwInfo := nil;
 pmCanSetFilter := nil;
@@ -1893,6 +2093,9 @@ pmCanExGetAsUByte := nil;
 pmCanExGetAsUWord := nil;
 pmCanExGetAsULong := nil; 
 pmCanExGetAsStringCopy := nil;
+// **** CAN-FD
+pmCanFdTransmit := nil;
+pmCanFdReceive := nil;
 
 if dll_wnd <> 0 then
   FreeLibrary(dll_wnd);    
