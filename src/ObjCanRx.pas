@@ -30,7 +30,7 @@ const
 
 type
   TRxCanMsgObj = record
-    CanMsg: TCanMsg;
+    CanMsg: TCanFdMsg;
     MsgCount: DWord;
     Min: DWord;
     Max: DWord;
@@ -62,7 +62,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure ClearStat;    
-    function Add(can_msg: PCanMsg): Integer;    
+    function Add(can_msg: PCanFdMsg): Integer;    
     procedure Clear;
     function ReadCanMsg(index: Integer; var msg: TRxCanMsgObj): Integer;       
   published
@@ -209,7 +209,7 @@ RxCanLeaveCritical;
 end;
 
 
-function TRxCanObjList.Add(can_msg: PCanMsg): Integer;
+function TRxCanObjList.Add(can_msg: PCanFdMsg): Integer;
 var i: Integer;
     a_msg: PRxCanMsgObj;
     tmp_msg: TRxCanMsgObj;
@@ -225,7 +225,7 @@ while (i < FCount) do
     begin                                         // Ja
     msg_count := a_msg^.MsgCount;
     last_time := a_msg^.LastTime;
-    Move(can_msg^, a_msg^.CanMsg, SizeOf(TCanMsg)); // Nachricht mit neusten Inhalt überschreiben    
+    Move(can_msg^, a_msg^.CanMsg, SizeOf(TCanFdMsg)); // Nachricht mit neusten Inhalt überschreiben    
     a_msg^.MsgCount := msg_count + 1;
     a_msg^.LastTime := timestamp;
     if a_msg^.MsgCount > 1 then
@@ -271,7 +271,7 @@ while (i < FCount) do
     end;
   inc(i);
   end;
-Move(can_msg^, tmp_msg.CanMsg, SizeOf(TCanMsg)); // Nachricht mit neusten Inhalt überschreiben
+Move(can_msg^, tmp_msg.CanMsg, SizeOf(TCanFdMsg)); // Nachricht mit neusten Inhalt überschreiben
 tmp_msg.MsgCount := 1;
 tmp_msg.Min := 0;
 tmp_msg.Max := 0;

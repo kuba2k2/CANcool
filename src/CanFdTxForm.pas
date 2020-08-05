@@ -2,7 +2,7 @@
                        CanTxForm.pas  -  description
                              -------------------
     begin             : 07.01.2013
-    last modified     : 30.05.2019     
+    last modified     : 30.05.2020     
     copyright         : (C) 2013 - 2020 by MHS-Elektronik GmbH & Co. KG, Germany
                                http://www.mhs-elektronik.de    
     autho             : Klaus Demlehner, klaus@mhs-elektronik.de
@@ -15,7 +15,7 @@
  *   http://opensource.org/licenses/MIT>                                   *              
  *                                                                         *
  ***************************************************************************}
-unit CanTxForm;
+unit CanFdTxForm;
 
 interface
 
@@ -36,7 +36,7 @@ const
   TX_WIN_ADD_MESSAGE = 6;
 
 type
-  TCanTxWin = class(TCanRxPrototypForm)
+  TCanFdTxWin = class(TCanRxPrototypForm)
     TxView: TStringGrid;
     KopfPanel: TPanel;
     MsgAddBtn: TBitBtn;
@@ -52,7 +52,6 @@ type
     DataEdit4: TZahlenEdit;
     DataEdit5: TZahlenEdit;
     DataEdit6: TZahlenEdit;
-    DLCEdit: TZahlenEdit;
     CanFormatGroupBox: TGroupBox;
     RTRCheck: TCheckBox;
     EFFCheck: TCheckBox;
@@ -69,6 +68,81 @@ type
     OpenDialog: TOpenDialog;
     SaveDialog: TSaveDialog;
     MsgCopyBtn: TBitBtn;
+    CanFdCheck: TCheckBox;
+    CanFdBrsCheck: TCheckBox;
+    DataEdit8: TZahlenEdit;
+    DataEdit9: TZahlenEdit;
+    DataEdit10: TZahlenEdit;
+    DataEdit11: TZahlenEdit;
+    DataEdit15: TZahlenEdit;
+    DataEdit12: TZahlenEdit;
+    DataEdit13: TZahlenEdit;
+    DataEdit14: TZahlenEdit;
+    DataEdit16: TZahlenEdit;
+    DataEdit17: TZahlenEdit;
+    DataEdit18: TZahlenEdit;
+    DataEdit19: TZahlenEdit;
+    DataEdit23: TZahlenEdit;
+    DataEdit20: TZahlenEdit;
+    DataEdit21: TZahlenEdit;
+    DataEdit22: TZahlenEdit;
+    DataEdit24: TZahlenEdit;
+    DataEdit25: TZahlenEdit;
+    DataEdit26: TZahlenEdit;
+    DataEdit27: TZahlenEdit;
+    DataEdit31: TZahlenEdit;
+    DataEdit28: TZahlenEdit;
+    DataEdit29: TZahlenEdit;
+    DataEdit30: TZahlenEdit;
+    DataEdit32: TZahlenEdit;
+    DataEdit33: TZahlenEdit;
+    DataEdit34: TZahlenEdit;
+    DataEdit35: TZahlenEdit;
+    DataEdit39: TZahlenEdit;
+    DataEdit36: TZahlenEdit;
+    DataEdit37: TZahlenEdit;
+    DataEdit38: TZahlenEdit;
+    DataEdit40: TZahlenEdit;
+    DataEdit41: TZahlenEdit;
+    DataEdit42: TZahlenEdit;
+    DataEdit43: TZahlenEdit;
+    DataEdit47: TZahlenEdit;
+    DataEdit44: TZahlenEdit;
+    DataEdit45: TZahlenEdit;
+    DataEdit46: TZahlenEdit;
+    DataEdit48: TZahlenEdit;
+    DataEdit49: TZahlenEdit;
+    DataEdit50: TZahlenEdit;
+    DataEdit51: TZahlenEdit;
+    DataEdit55: TZahlenEdit;
+    DataEdit52: TZahlenEdit;
+    DataEdit53: TZahlenEdit;
+    DataEdit54: TZahlenEdit;
+    DataEdit56: TZahlenEdit;
+    DataEdit57: TZahlenEdit;
+    DataEdit58: TZahlenEdit;
+    DataEdit59: TZahlenEdit;
+    DataEdit63: TZahlenEdit;
+    DataEdit60: TZahlenEdit;
+    DataEdit61: TZahlenEdit;
+    DataEdit62: TZahlenEdit;
+    Label9: TLabel;
+    Label10: TLabel;
+    Label11: TLabel;
+    Label12: TLabel;
+    Label13: TLabel;
+    Label14: TLabel;
+    Label15: TLabel;
+    Label8: TLabel;
+    Label16: TLabel;
+    Label17: TLabel;
+    Label18: TLabel;
+    Label19: TLabel;
+    Label20: TLabel;
+    Label21: TLabel;
+    Label22: TLabel;
+    Label23: TLabel;
+    DLCEdit: TComboBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure MsgAddBtnClick(Sender: TObject);
@@ -83,7 +157,9 @@ type
     { Private-Deklarationen }
     LineHeight: Integer;
     PressedBtn: integer;
-    CanDataEdit: array[0..7] of TZahlenEdit;
+    CanDataEdit: array[0..63] of TZahlenEdit;
+    function CorrectCanFdLen(len: Byte): Byte;
+    procedure UpdateUi;
     procedure SetupTxView;
     procedure EmptyMessage(can_msg: PTxCanMsg);
     procedure GetMsgFromUi(can_msg: PTxCanMsg);
@@ -112,7 +188,7 @@ uses MainForm;
 { TSendenForm }
 
 const
-TxViewHeaders: array[0..8,0..1] of String = (('Frame',      'STD/RTR'),
+TxViewHeaders: array[0..8,0..1] of String = (('Frame',      'STD/RTR  FD/BRS'),
                                              ('ID',         '12345678'),
                                              ('DLC',        '64'),
                                              ('DATA [HEX]', 'XX XX XX XX XX XX XX XX'),
@@ -122,18 +198,18 @@ TxViewHeaders: array[0..8,0..1] of String = (('Frame',      'STD/RTR'),
                                              ('Komentar',   'XXXXXXXXXXXXXXXXXXXXXXXXX'),
                                              ('Senden',     '-Senden-'));
 
-procedure TCanTxWin.FormCreate(Sender: TObject);
+procedure TCanFdTxWin.FormCreate(Sender: TObject);
 var i: Integer;
     obj: TComponent;
-    
+
 begin
 inherited;
-for i := 0 to 7 do
+for i := 0 to 63 do
   begin;
   obj := FindComponent('DataEdit' + IntToStr(i));
   if obj is TZahlenEdit then 
-    CanDataEdit[i] := TZahlenEdit(obj)
-  end; 
+    CanDataEdit[i] := TZahlenEdit(obj); 
+  end;      
 TMainWin(owner).ButtonImages.GetBitmap(2, MsgAddBtn.Glyph);
 TMainWin(owner).ButtonImages.GetBitmap(0, MsgCopyBtn.Glyph);
 TMainWin(owner).ButtonImages.GetBitmap(6, MsgTxBtn.Glyph);
@@ -145,20 +221,20 @@ EnableTxEditEvents;
 end;
 
 
-procedure TCanTxWin.SetupTxView;
+procedure TCanFdTxWin.SetupTxView;
 var i, col, h, w, h_max, w_max: Integer;
     rect: TRect;
     s: String;
 
 begin;
-TxView.ColCount := 9; 
+TxView.ColCount := 9;
 h_max := 1;
 TxView.Canvas.Font.Assign(TxView.Font);
 for col := 0 to 8 do
-  begin;  
-  w_max := 1;        
+  begin;
+  w_max := 1;
   for i := 0 to 1 do
-    begin;      
+    begin;
     s := TxViewHeaders[col, i];
     if i = 0 then
       TxView.Cells[col,0] := s;
@@ -168,17 +244,17 @@ for col := 0 to 8 do
     if w_max < w then
       w_max := w;
     if h_max < h then
-      h_max := h;            
+      h_max := h;
     end;
-  TxView.ColWidths[col] := w_max + 5;  
-  end;  
+  TxView.ColWidths[col] := w_max + 5;
+  end;
 TxView.RowHeights[0] := h_max + 4;   
 LineHeight := h_max;
 TxView.Refresh;
 end;
 
 
-procedure TCanTxWin.FormDestroy(Sender: TObject);
+procedure TCanFdTxWin.FormDestroy(Sender: TObject);
 
 begin
 if Assigned(TxList) then
@@ -187,13 +263,13 @@ inherited;
 end;
 
 
-procedure TCanTxWin.EmptyMessage(can_msg: PTxCanMsg);
+procedure TCanFdTxWin.EmptyMessage(can_msg: PTxCanMsg);
 var i: Integer;
 
 begin;
 can_msg^.CanMsg.Flags := 0;
 can_msg^.CanMsg.ID := 0;
-for i := 0 to 7 do
+for i := 0 to 63 do
   can_msg^.CanMsg.Data.Bytes[i] := 0;
 can_msg^.TxMode := 0;  // 0 = Off, 1 = Periodic, 2 = RTR, 3 = Trigger
 can_msg^.Intervall := 0;
@@ -202,42 +278,92 @@ can_msg^.Comment := '';
 end;
 
 
-procedure TCanTxWin.GetMsgFromUi(can_msg: PTxCanMsg);
+function TCanFdTxWin.CorrectCanFdLen(len: Byte): Byte;
+
+begin;
+if len <= 8 then
+  result := len
+else if len > 64 then // Datenlänge auf 64 Byte begrenzen
+  result := 64
+else if len > 48 then
+  result := 64  // Datenlänge = 64 Byte
+else if len > 32 then
+  result := 48  // Datenlänge = 48 Byte
+else if len > 24 then
+  result := 32  // Datenlänge = 32 Byte
+else if len > 20 then
+  result := 24  // Datenlänge = 24 Byte
+else if len > 16 then
+  result := 20  // Datenlänge = 20 Byte
+else if len > 12 then
+  result := 16  // Datenlänge = 16 Byte
+else
+  result := 12  // Datenlänge = 12 Byte
+end;
+
+
+procedure TCanFdTxWin.UpdateUi;
+var len: Byte;
+
+begin;
+DisableTxEditEvents;
+len := CorrectCanFdLen(StrToInt(DLCEdit.Text));
+DLCEdit.Text := IntToStr(len);
+if len > 8 then
+  CanFdCheck.Checked := True;
+if not CanFdCheck.Checked then
+   CanFdBrsCheck.Checked := False;
+EnableTxEditEvents;
+TxEditChange(CanFdCheck);
+TxEditChange(DLCEdit);
+end;
+
+
+procedure TCanFdTxWin.GetMsgFromUi(can_msg: PTxCanMsg);
 var i: Integer;
     len: Byte;
 
 begin;
-len := DLCEdit.Number;
+DisableTxEditEvents;
+len := CorrectCanFdLen(StrToInt(DLCEdit.Text));
+can_msg^.CanMsg.Length := len;
+DLCEdit.Text := IntToStr(len);
 if len > 8 then
-  len := 8;
-can_msg^.CanMsg.Length:= len;
+  CanFdCheck.Checked := True;
+if not CanFdCheck.Checked then
+   CanFdBrsCheck.Checked := False;
 can_msg^.CanMsg.Flags := 0;
 if EFFCheck.Checked then
   can_msg^.CanMsg.Flags := can_msg^.CanMsg.Flags or FlagCanFdEFF;
 if RTRCheck.Checked then
   can_msg^.CanMsg.Flags := can_msg^.CanMsg.Flags or FlagCanFdRTR;
-can_msg^.CanMsg.ID := IDEdit.Number;
-for i := 0 to 7 do
+if CanFdCheck.Checked then
+  can_msg^.CanMsg.Flags := can_msg^.CanMsg.Flags or FlagCanFdFD;
+if CanFdBrsCheck.Checked then
+  can_msg^.CanMsg.Flags := can_msg^.CanMsg.Flags or FlagCanFdBRS;
+can_msg^.CanMsg.ID:=IDEdit.Number;
+for i := 0 to 63 do
   can_msg^.CanMsg.Data.Bytes[i] := CanDataEdit[i].Number;
 can_msg^.TxMode := TxModeCombo.ItemIndex;   // 0 = Off, 1 = Periodic, 2 = RTR, 3 = Trigger
 can_msg^.Intervall := IntervallEdit.Number;
 can_msg^.TriggerId := TriggerIdEdit.Number;
 can_msg^.Comment := CommentEdit.Text;
+EnableTxEditEvents;
 end;
 
 
-procedure TCanTxWin.SetMsgToUi(can_msg: PTxCanMsg);
+procedure TCanFdTxWin.SetMsgToUi(can_msg: PTxCanMsg);
 var len, i: integer;
 
 begin;
 DisableTxEditEvents;
 if can_msg = nil then
   begin;
-  DLCEdit.Number := 0;
+  DLCEdit.Text := '0';
   EFFCheck.Checked := False;
   RTRCheck.Checked := False;
   IDEdit.Number := 0;
-  for i := 0 to 7 do
+  for i := 0 to 63 do
     CanDataEdit[i].Number := 0;
   TxModeCombo.ItemIndex := 0;
   IntervallEdit.Number := 0;
@@ -247,7 +373,7 @@ if can_msg = nil then
 else
   begin;
   len := can_msg^.CanMsg.Length;
-  DLCEdit.Number := len;
+  DLCEdit.Text := IntToStr(len);
   if (can_msg^.CanMsg.Flags and FlagCanFdEFF) > 0 then
     EFFCheck.Checked := True
   else
@@ -256,15 +382,22 @@ else
     RTRCheck.Checked := True
   else
     RTRCheck.Checked := False;
+  if (can_msg^.CanMsg.Flags and FlagCanFdFD) > 0 then  
+    CanFdCheck.Checked := True
+  else  
+    CanFdCheck.Checked := False;
+  if (can_msg^.CanMsg.Flags and FlagCanFdBRS) > 0 then
+    CanFdBrsCheck.Checked := True
+  else
+    CanFdBrsCheck.Checked := False;  
   IDEdit.Number := can_msg^.CanMsg.ID;
-  for i := 0 to 7 do
+  for i := 0 to 63 do
     begin;
     if i < len then
       CanDataEdit[i].Number := can_msg^.CanMsg.Data.Bytes[i]
     else  
       CanDataEdit[i].Number := 0;
-    end; 
-
+    end;  
   TxModeCombo.ItemIndex := can_msg^.TxMode;   // 0 = Off, 1 = Periodic, 2 = RTR, 3 = Trigger
   IntervallEdit.Number := can_msg^.Intervall;
   TriggerIdEdit.Number := can_msg^.TriggerId;
@@ -274,7 +407,7 @@ EnableTxEditEvents;
 end;
 
 
-procedure TCanTxWin.MsgAddBtnClick(Sender: TObject);
+procedure TCanFdTxWin.MsgAddBtnClick(Sender: TObject);
 var can_msg: TTxCanMsg;
 
 begin
@@ -288,7 +421,7 @@ TxView.Refresh;
 end;
 
 
-procedure TCanTxWin.MsgCopyBtnClick(Sender: TObject);
+procedure TCanFdTxWin.MsgCopyBtnClick(Sender: TObject);
 var can_msg: TTxCanMsg;
 
 begin
@@ -302,7 +435,7 @@ TxView.Refresh;
 end;
 
 
-procedure TCanTxWin.MsgDelBtnClick(Sender: TObject);
+procedure TCanFdTxWin.MsgDelBtnClick(Sender: TObject);
 
 begin
 if (TxList = nil) or (TxView.Row < 1) or (TxView.Row > TxList.Count) then
@@ -319,7 +452,7 @@ TxView.Refresh;
 end;
 
 
-procedure TCanTxWin.MsgTxBtnClick(Sender: TObject);
+procedure TCanFdTxWin.MsgTxBtnClick(Sender: TObject);
 var can_msg: TTxCanMsg;
 
 begin
@@ -332,19 +465,22 @@ if TxList.Count = 0 then
   TxView.RowCount := TxList.Count + 1;
   TxView.Row := TxView.RowCount - 1;
   TxView.Refresh;
-  end;
+  end
+else
+  UpdateUi;
 if (TxView.Row <= TxList.Count) and (TxView.Row > 0) then
   TxList.Transmit(TxView.Row-1);
 end;
 
 
-procedure TCanTxWin.TxViewDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
+procedure TCanFdTxWin.TxViewDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
 var
   can_msg: PTxCanMsg;
-  str: string[100];
-  d, len: Byte;
-  x, y, dlc, i: integer;
-  rtr, eff: boolean;
+  str: string;
+  d: Byte;
+  out_rect: TRect;
+  x, y, dlc, i, char_cnt, data_lines: integer;
+  rtr, eff, fd, brs: boolean;
 
 begin
 if ARow = 0 then
@@ -377,9 +513,31 @@ else
 if (can_msg^.CanMsg.Flags and FlagCanFdRTR) > 0 then
   rtr := True
 else
-  rtr := False; 
-TxView.RowHeights[ARow] := LineHeight + 4;  
-  
+  rtr := False;
+if (can_msg^.CanMsg.Flags and FlagCanFdFD) > 0 then
+  fd := True
+else
+  fd := False;
+if (can_msg^.CanMsg.Flags and FlagCanFdBRS) > 0 then
+  brs := True
+else
+  brs := False; 
+// Zellenhöhe bestimmen
+if rtr or (dlc = 0) then
+  data_lines := 1
+else
+  begin;
+  data_lines := dlc div 8; 
+  if (dlc mod 8) > 0 then
+    inc(data_lines); 
+  end;
+y := (LineHeight * data_lines) + 4;  
+TxView.RowHeights[ARow] := y;
+out_rect.Left := Rect.Left + 1;
+out_rect.Top := Rect.Top + 2;
+out_rect.Bottom := Rect.Top + y;
+out_rect.Right := Rect.Right;  
+
 case ACol of
   0 :  begin;                         // Frame Format
        if rtr and eff then
@@ -390,6 +548,10 @@ case ACol of
          str := 'STD/RTR'
        else
          str := 'STD';
+      if fd and brs then
+        str := str + ' FD/BRS'
+      else if fd then
+        str := str + ' FD';  
        end;
   1 :  begin;
        if eff then
@@ -401,21 +563,20 @@ case ACol of
   3 : begin;                          // Daten (Hex)
       if (dlc > 0) and not rtr then
         begin;
-        len := 0;
-        for i := 0 to dlc-1 do
+        char_cnt := 0;
+        for i := 0 to dlc - 1 do
           begin;
           d := can_msg^.CanMsg.Data.Bytes[i];
-          if i > 0 then
-            begin
-            inc(len);
-            str[len] := ' ';
+          if char_cnt > 0 then                      
+            str := str + ' ';
+          if char_cnt = 8 then
+            begin;
+            str := str + chr($0D) + chr($0A);
+            char_cnt := 0;
             end;
-          inc(len);
-          str[len] := HexDigits[d SHR $04];
-          inc(len);
-          str[len] := HexDigits[d AND $0F];
+          str := str + HexDigits[d SHR $04] + HexDigits[d AND $0F];        
+          inc(char_cnt);
           end;
-        str[0] := Char(len);
         end
       else
         str := '';
@@ -475,13 +636,14 @@ case ACol of
       end;
   end;
 if ACol <> 8 then
-  TxView.Canvas.TextOut(Rect.Left+1, Rect.Top+2, str);
+  DrawText(TxView.Canvas.Handle, PChar(str), length(str), out_rect, DT_Left);
+  //TxView.Canvas.TextOut(Rect.Left+1, Rect.Top+2, str);
 if (ACol = TxView.Col) and (ARow = TxView.Row) and (ACol <> 8) then
   TxView.Canvas.DrawFocusRect(Rect);
 end;
 
 
-procedure TCanTxWin.TxViewMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TCanFdTxWin.TxViewMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
 ACol, ARow: integer;
 
@@ -492,7 +654,7 @@ if ACol = 8 then       // Senden Schaltfläche
 end;
 
 
-procedure TCanTxWin.TxViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+procedure TCanFdTxWin.TxViewMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
 ACol, ARow: integer;
 //Key: char;
@@ -513,7 +675,7 @@ if TxView.Col = 8 then    // Senden Schaltfläche
 end;
 
 
-procedure TCanTxWin.RxCanMessages(can_msg: PCanFdMsg; count: Integer);
+procedure TCanFdTxWin.RxCanMessages(can_msg: PCanFdMsg; count: Integer);
 var i: Integer;
 
 begin;
@@ -527,17 +689,17 @@ for i := 1 to count do
 end;
 
 
-procedure TCanTxWin.RxCanUpdate;
+procedure TCanFdTxWin.RxCanUpdate;
 begin
   ;
 end;  
 
 
-procedure TCanTxWin.ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg);
+procedure TCanFdTxWin.ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg);
 var tx_msg: TTxCanMsg;
 
 begin;
-case cmd of  
+case cmd of
   TX_WIN_SAVE  : begin;
                  if TxList.Count = 0 then
                    begin;
@@ -600,7 +762,7 @@ case cmd of
 end;
 
 
-procedure TCanTxWin.DisableTxEditEvents;
+procedure TCanFdTxWin.DisableTxEditEvents;
 var i: Integer;
 
 begin;
@@ -608,7 +770,7 @@ IdEdit.OnChange := nil;
 DLCEdit.OnChange := nil;
 IdEdit.OnKeyUp := nil;
 DLCEdit.OnKeyUp := nil;
-for i := 0 to 7 do
+for i := 0 to 63 do
   begin;
   CanDataEdit[i].OnChange := nil;
   CanDataEdit[i].OnKeyUp := nil;
@@ -620,11 +782,13 @@ IntervallEdit.OnKeyUp := nil;
 CommentEdit.OnChange := nil;
 RTRCheck.OnClick := nil;
 EFFCheck.OnClick := nil;
+CanFdCheck.OnClick := nil;
+CanFdBrsCheck.OnClick := nil;
 TxModeCombo.OnChange := nil;
 end;
 
 
-procedure TCanTxWin.EnableTxEditEvents;
+procedure TCanFdTxWin.EnableTxEditEvents;
 var i: Integer;
 
 begin;
@@ -632,7 +796,7 @@ IdEdit.OnChange := TxEditOnChange;
 DLCEdit.OnChange := TxEditOnChange;
 IdEdit.OnKeyUp := TxEditKeyUp;
 DLCEdit.OnKeyUp := TxEditKeyUp;
-for i := 0 to 7 do
+for i := 0 to 63 do
   begin;
   CanDataEdit[i].OnChange := TxEditOnChange;
   CanDataEdit[i].OnKeyUp := TxEditKeyUp;
@@ -644,14 +808,15 @@ IntervallEdit.OnKeyUp := TxEditKeyUp;
 CommentEdit.OnChange := TxEditOnChange;
 RTRCheck.OnClick := TxEditOnChange;
 EFFCheck.OnClick := TxEditOnChange;
+CanFdCheck.OnClick := TxEditOnChange;
+CanFdBrsCheck.OnClick := TxEditOnChange;
 TxModeCombo.OnChange := TxEditOnChange;
 end;
 
 
-procedure TCanTxWin.TxEditChange(sender: TObject);
+procedure TCanFdTxWin.TxEditChange(sender: TObject);
 var can_msg: PTxCanMsg;
     flags: DWord;
-    len: Byte;
     tag: Integer;
 
 begin;
@@ -661,51 +826,50 @@ if (TxView.Row <= TxList.Count) and (TxView.Row > 0) then
 if can_msg = nil then
   exit;
 tag := TComponent(sender).Tag;
-if tag < 8 then
+if tag < 64 then
   can_msg^.CanMsg.Data.Bytes[tag] := CanDataEdit[tag].Number
 else
   begin;
   case tag of
-    8  : can_msg^.CanMsg.ID:=IDEdit.Number;
-    9  : begin;
-         len := DLCEdit.Number;
-         if len > 8 then
-           len := 8;
-         can_msg^.CanMsg.Length := len;
-         end;
-    10, 11 :
+    64 : can_msg^.CanMsg.ID := IDEdit.Number;
+    65 : can_msg^.CanMsg.Length := CorrectCanFdLen(StrToInt(DLCEdit.Text));
+    66, 67, 68, 69 :
        begin;
        flags := 0;
        if RTRCheck.Checked then
          flags := flags or FlagCanFdRTR;
        if EFFCheck.Checked then
          flags := flags or FlagCanFdEFF;
+       if CanFdCheck.Checked then
+         flags := flags or FlagCanFdFD;
+       if CanFdBrsCheck.Checked then
+         flags := flags or FlagCanFdBRS;
        can_msg^.CanMsg.Flags:= flags;
        end;
-    12 : can_msg^.Comment := CommentEdit.Text;
-    13 : can_msg^.TxMode := TxModeCombo.ItemIndex;   // 0 = Off, 1 = Periodic, 2 = RTR, 3 = Trigger
-    14 : can_msg^.TriggerId := TriggerIdEdit.Number;
-    15 : can_msg^.Intervall := IntervallEdit.Number;
-    end;
+    70 : can_msg^.TxMode := TxModeCombo.ItemIndex;   // 0 = Off, 1 = Periodic, 2 = RTR, 3 = Trigger
+    71 : can_msg^.Intervall := IntervallEdit.Number;
+    72 : can_msg^.TriggerId := TriggerIdEdit.Number;
+    73 : can_msg^.Comment := CommentEdit.Text;
+    end;        
   end;
 TxView.Refresh;
 end;
 
 
-procedure TCanTxWin.TxEditOnChange(Sender: TObject);
+procedure TCanFdTxWin.TxEditOnChange(Sender: TObject);
 begin
 TxEditChange(Sender);
 end;
 
 
-procedure TCanTxWin.TxEditKeyUp(Sender: TObject; var Key: Word;
+procedure TCanFdTxWin.TxEditKeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
 TxEditChange(Sender);
 end;
 
 
-procedure TCanTxWin.TxViewClick(Sender: TObject);
+procedure TCanFdTxWin.TxViewClick(Sender: TObject);
 var can_msg: PTxCanMsg;
 
 begin
@@ -722,4 +886,5 @@ end;
 
 
 end.
+
 

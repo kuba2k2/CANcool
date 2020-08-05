@@ -20,7 +20,6 @@ uses
   Windows,
   MainForm in 'MainForm.pas' {MainWin},
   CanRxForm in 'CanRxForm.pas' {CanRxWin},
-  CanTxForm in 'CanTxForm.pas' {CanTxWin},
   IntegerTerm in 'IntegerTerm.pas',
   CanRxPrototyp in 'CanRxPrototyp.pas' {CanRxPrototypForm},
   CanGaugeForm in 'CanGaugeForm.pas' {CanGaugeWin},
@@ -35,9 +34,9 @@ uses
   Util in 'Util.pas',
   setup in 'setup.pas' {SetupForm},
   ObjCanRx in 'ObjCanRx.pas',
-  //Splash in 'Splash.pas' {SplashForm},
-  CanRxSaveForm in 'CanRxSaveForm.pas' {TraceSaveProgress};
-
+  CanRxSaveForm in 'CanRxSaveForm.pas' {TraceSaveProgress},
+  CanFdTxForm in 'CanFdTxForm.pas' {CanFdTxWin},
+  CanTxForm in 'CanTxForm.pas' {CanTxWin};
 {$R *.res}
 
 begin

@@ -20,7 +20,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls, ComCtrls, IniFiles, Longedit, zahlen;
+  StdCtrls, ExtCtrls, ComCtrls, IniFiles, Longedit, zahlen, zahlen32;
 
 type
   TSetupData = record
@@ -39,17 +39,36 @@ type
                 InterfaceType: Integer; { 0 = USB                       }
                                         { 1 = RS232                     }
                 HardwareSnr: String;
-                CANSpeed: Integer; { => 0 = 10kBit/s                    }
-                                   {    1 = 20kBit/s                    }
-                                   {    2 = 50kBit/s                    }
-                                   {    3 = 100 kBit/s                  }
-                                   {    4 = 125 kBit/s                  }
-                                   {    5 = 250 kBit/s                  }
-                                   {    6 = 500 kBit/s                  }
-                                   {    7 = 800 kBit/s                  }
-                                   {    8 = 1 MBit/s                    }
+                CANSpeed: Integer; { => 0 = Benutzerdefiniert 
+                                   {    1 = 10kBit/s                    }
+                                   {    2 = 20kBit/s                    }
+                                   {    3 = 50kBit/s                    }
+                                   {    4 = 100 kBit/s                  }
+                                   {    5 = 125 kBit/s                  }
+                                   {    6 = 250 kBit/s                  }
+                                   {    7 = 500 kBit/s                  }
+                                   {    8 = 800 kBit/s                  }
+                                   {    9 = 1 MBit/s                    }                                   
+                CANDataSpeed: Integer; { => 0 = Benutzerdefiniert
+                                       {    1 = 250kBit/s               }
+                                       {    2 = 500kBit/s               }
+                                       {    3 = 1 Bit/s                 }
+                                       {    4 = 1,5 MBit/s              }
+                                       {    5 = 2 MBit/s                }
+                                       {    6 = 3 MBit/s                }
+                                       {    7 = 4 MBit/s                }
+                                       {    8 = 5 MBit/s                }                                       
+               NBTRValue: Integer;
+               NBTRBitrate: String;
+               NBTRDesc: String;               
+               DBTRValue: Integer;
+               DBTRBitrate: String;
+               DBTRDesc: String;
                ListenOnly: Boolean;
                ShowErrorMessages: Boolean;
+               CanFd: Boolean;
+               CanFifoOvClear: Boolean;
+               CanFifoOvMessages: Boolean;
                DataClearMode: Integer; { 0 = Automatisch löschen        }
                                        { 1 = Benutzer fragen            }
                                        { 2 = nicht löschen              }
@@ -84,11 +103,34 @@ type
     Label5: TLabel;
     Label6: TLabel;
     RxDLimitEdit: TLongIntEdit;
+    CanFdCheckBox: TCheckBox;
+    CANDataSpeedEdit: TRadioGroup;
+    NBTRStr: TLabel;
+    NBTRHexStr: TLabel;
+    DBTRHexStr: TLabel;
+    DBTRStr: TLabel;
+    CustomNBTRSetupBtn: TButton;
+    CustomDBTRSetupBtn: TButton;
+    NBTRDescEdit: TEdit;
+    DBTRDescEdit: TEdit;
+    NBTREdit: TZahlen32Edit;
+    DBTREdit: TZahlen32Edit;
+    NBTRBitrateEdit: TEdit;
+    NBTRBitrateStr: TLabel;
+    DBTRBitrateEdit: TEdit;
+    DBTRBitrateStr: TLabel;
+    Bevel1: TBevel;
+    CanFifoOvClearBox: TCheckBox;
+    CanFifoOvMessagesBox: TCheckBox;
     procedure InterfaceTypeEditClick(Sender: TObject);
     procedure DriverEditClick(Sender: TObject);
     procedure RxDEnableDynamicCheckBoxClick(Sender: TObject);
+    procedure CanFdCheckBoxClick(Sender: TObject);
+    procedure CANSpeedEditClick(Sender: TObject);
+    procedure CANDataSpeedEditClick(Sender: TObject);
   private
     { Private-Deklarationen }
+    procedure UpdateCan;
     procedure UpdateDataList;
     procedure UpdateHardware;
   public
@@ -115,10 +157,26 @@ var i: integer;
 
 begin;
 i := -1;
-DriverEdit.ItemIndex:=SetupData.Driver;
-CANSpeedEdit.ItemIndex:=SetupData.CANSpeed;
+NBTREdit.Number := SetupData.NBTRValue;
+NBTRBitrateEdit.Text := SetupData.NBTRBitrate;
+NBTRDescEdit.Text := SetupData.NBTRDesc;
+DBTREdit.Number := SetupData.DBTRValue;
+DBTRBitrateEdit.Text := SetupData.DBTRBitrate;
+DBTRDescEdit.Text := SetupData.DBTRDesc;
+DriverEdit.ItemIndex := SetupData.Driver;
+if SetupData.CANSpeed = 0 then
+  CANSpeedEdit.ItemIndex := 9
+else
+  CANSpeedEdit.ItemIndex := SetupData.CANSpeed - 1;
+if SetupData.CANDataSpeed = 0 then
+  CANDataSpeedEdit.ItemIndex := 7
+else
+  CANDataSpeedEdit.ItemIndex := SetupData.CANDataSpeed - 1;
 LomCheckBox.Checked := SetupData.ListenOnly;
 ShowErrMsgCheckBox.Checked := SetupData.ShowErrorMessages;
+CanFdCheckBox.Checked := SetupData.CanFd;
+CanFifoOvClearBox.Checked := SetupData.CanFifoOvClear;
+CanFifoOvMessagesBox.Checked := SetupData.CanFifoOvMessages;
 DataClearModeGrp.ItemIndex:= SetupData.DataClearMode;
 RxDBufferSizeEdit.Number := SetupData.RxDBufferSize;
 RxDEnableDynamicCheckBox.Checked := SetupData.RxDEnableDynamic;
@@ -131,9 +189,25 @@ UpdateSetupForm;
 if ShowModal = idOk then
   begin;
   i := 0;
-  SetupData.CANSpeed:=CANSpeedEdit.ItemIndex;
+  SetupData.NBTRValue := NBTREdit.Number;
+  SetupData.NBTRBitrate := NBTRBitrateEdit.Text;
+  SetupData.NBTRDesc := NBTRDescEdit.Text;
+  SetupData.DBTRValue := DBTREdit.Number;
+  SetupData.DBTRBitrate := DBTRBitrateEdit.Text;
+  SetupData.DBTRDesc := DBTRDescEdit.Text;
+  if CANSpeedEdit.ItemIndex = 9 then
+    SetupData.CANSpeed := 0
+  else
+    SetupData.CANSpeed := CANSpeedEdit.ItemIndex + 1;
+  if CANDataSpeedEdit.ItemIndex = 7 then
+    SetupData.CANDataSpeed := 0
+  else
+    SetupData.CANDataSpeed := CANDataSpeedEdit.ItemIndex + 1;
   SetupData.ListenOnly := LomCheckBox.Checked;
   SetupData.ShowErrorMessages := ShowErrMsgCheckBox.Checked;
+  SetupData.CanFd := CanFdCheckBox.Checked;
+  SetupData.CanFifoOvClear := CanFifoOvClearBox.Checked;
+  SetupData.CanFifoOvMessages := CanFifoOvMessagesBox.Checked;
   SetupData.DataClearMode:=DataClearModeGrp.ItemIndex;
   SetupData.RxDBufferSize := RxDBufferSizeEdit.Number;
   SetupData.RxDEnableDynamic := RxDEnableDynamicCheckBox.Checked;
@@ -162,8 +236,70 @@ procedure TSetupForm.UpdateSetupForm;
 
 begin;
 InterfaceTypeEdit.Enabled := True;
+UpdateCan;
 UpdateDataList;
 UpdateHardware;
+end;
+
+
+procedure TSetupForm.UpdateCan;
+
+begin
+if CANSpeedEdit.ItemIndex = 9 then
+  begin;
+  NBTRStr.Enabled := TRUE;
+  NBTREdit.Enabled := TRUE;
+  NBTRHexStr.Enabled := TRUE;
+  NBTRBitrateStr.Enabled := TRUE;
+  NBTRBitrateEdit.Enabled := TRUE;
+  CustomNBTRSetupBtn.Enabled := TRUE;
+  NBTRDescEdit.Enabled := TRUE;
+  end
+else
+  begin;
+  NBTRStr.Enabled := FALSE;
+  NBTREdit.Enabled := FALSE;
+  NBTRHexStr.Enabled := FALSE;
+  NBTRBitrateStr.Enabled := FALSE;
+  NBTRBitrateEdit.Enabled := FALSE;
+  CustomNBTRSetupBtn.Enabled := FALSE;
+  NBTRDescEdit.Enabled := FALSE;
+  end;
+if CanFdCheckBox.Checked then
+  begin;
+  CANDataSpeedEdit.Enabled := TRUE;
+  if CANDataSpeedEdit.ItemIndex = 7 then
+    begin;
+    DBTRStr.Enabled := TRUE;
+    DBTREdit.Enabled := TRUE;
+    DBTRHexStr.Enabled := TRUE;
+    DBTRBitrateStr.Enabled := TRUE;
+    DBTRBitrateEdit.Enabled := TRUE;
+    CustomDBTRSetupBtn.Enabled := TRUE;
+    DBTRDescEdit.Enabled := TRUE;
+    end
+  else
+    begin;
+    DBTRStr.Enabled := FALSE;
+    DBTREdit.Enabled := FALSE;
+    DBTRHexStr.Enabled := FALSE;
+    DBTRBitrateStr.Enabled := FALSE;
+    DBTRBitrateEdit.Enabled := FALSE;
+    CustomDBTRSetupBtn.Enabled := FALSE;
+    DBTRDescEdit.Enabled := FALSE;
+    end;
+  end
+else
+  begin;
+  CANDataSpeedEdit.Enabled := FALSE;
+  DBTRStr.Enabled := FALSE;
+  DBTREdit.Enabled := FALSE;
+  DBTRHexStr.Enabled := FALSE;
+  DBTRBitrateStr.Enabled := FALSE;
+  DBTRBitrateEdit.Enabled := FALSE;
+  CustomDBTRSetupBtn.Enabled := FALSE;
+  DBTRDescEdit.Enabled := FALSE;
+  end;
 end;
 
 
@@ -213,19 +349,42 @@ else
 end;
 
 
+procedure TSetupForm.CanFdCheckBoxClick(Sender: TObject);
+
+begin
+UpdateCan;
+end;
+
+
+procedure TSetupForm.CANSpeedEditClick(Sender: TObject);
+
+begin
+UpdateCan;
+end;
+
+procedure TSetupForm.CANDataSpeedEditClick(Sender: TObject);
+
+begin
+UpdateCan;
+end;
+
+
 procedure TSetupForm.RxDEnableDynamicCheckBoxClick(Sender: TObject);
+
 begin
 UpdateDataList;
 end;
 
 
 procedure TSetupForm.DriverEditClick(Sender: TObject);
+
 begin
 UpdateHardware;
 end;
 
 
 procedure TSetupForm.InterfaceTypeEditClick(Sender: TObject);
+
 begin
 UpdateHardware;
 end;
@@ -239,9 +398,21 @@ SetupData.Port := ini_file.ReadInteger('GLOBAL', 'Port', 0);
 SetupData.BaudRate := ini_file.ReadInteger('GLOBAL', 'BaudRate', 0);
 SetupData.InterfaceType := ini_file.ReadInteger('GLOBAL', 'InterfaceType', 0);
 SetupData.HardwareSnr := ini_file.ReadString('GLOBAL', 'HardwareSnr', '');
+// Tab CAN
 SetupData.CANSpeed := ini_file.ReadInteger('GLOBAL', 'CANSpeed', 0);
+SetupData.CANDataSpeed := ini_file.ReadInteger('GLOBAL', 'CANDataSpeed', 0);
+SetupData.NBTRValue := ini_file.ReadInteger('GLOBAL', 'NBTRValue', 0);
+SetupData.NBTRBitrate := ini_file.ReadString('GLOBAL', 'NBTRBitrate', '');
+SetupData.NBTRDesc:= ini_file.ReadString('GLOBAL', 'NBTRDesc', '');
+SetupData.DBTRValue := ini_file.ReadInteger('GLOBAL', 'DBTRValue', 0);
+SetupData.DBTRBitrate := ini_file.ReadString('GLOBAL', 'DBTRBitrate', '');
+SetupData.DBTRDesc:= ini_file.ReadString('GLOBAL', 'DBTRDesc', '');
 SetupData.ListenOnly := ini_file.ReadBool('GLOBAL', 'ListenOnly', false);
 SetupData.ShowErrorMessages := ini_file.ReadBool('GLOBAL', 'ShowErrorMessages', false);
+SetupData.CanFd := ini_file.ReadBool('GLOBAL', 'CanFd', false);
+SetupData.CanFifoOvClear := ini_file.ReadBool('GLOBAL', 'CanFifoOvClear', false);
+SetupData.CanFifoOvMessages := ini_file.ReadBool('GLOBAL', 'CanFifoOvMessages', false);
+
 SetupData.DataClearMode := ini_file.ReadInteger('GLOBAL', 'DataClearMode', 0);
 SetupData.RxDBufferSize := ini_file.ReadInteger('GLOBAL', 'RxDBufferSize', 100000);
 SetupData.RxDEnableDynamic := ini_file.ReadBool('GLOBAL', 'RxDEnableDynamic', false);
@@ -258,13 +429,22 @@ ini_file.WriteInteger('GLOBAL', 'BaudRate', SetupData.BaudRate);
 ini_file.WriteInteger('GLOBAL', 'InterfaceType', SetupData.InterfaceType);
 ini_file.WriteString('GLOBAL', 'HardwareSnr', SetupData.HardwareSnr);
 ini_file.WriteInteger('GLOBAL', 'CANSpeed', SetupData.CANSpeed);
+ini_file.WriteInteger('GLOBAL', 'CANDataSpeed', SetupData.CANDataSpeed);
+ini_file.WriteInteger('GLOBAL', 'NBTRValue', SetupData.NBTRValue);
+ini_file.WriteString('GLOBAL', 'NBTRBitrate', SetupData.NBTRBitrate);
+ini_file.WriteString('GLOBAL', 'NBTRDesc', SetupData.NBTRDesc);
+ini_file.WriteInteger('GLOBAL', 'DBTRValue', SetupData.DBTRValue);
+ini_file.WriteString('GLOBAL', 'DBTRBitrate', SetupData.DBTRBitrate);
+ini_file.WriteString('GLOBAL', 'DBTRDesc', SetupData.DBTRDesc);
 ini_file.WriteBool('GLOBAL', 'ListenOnly', SetupData.ListenOnly);
 ini_file.WriteBool('GLOBAL', 'ShowErrorMessages', SetupData.ShowErrorMessages);
+ini_file.WriteBool('GLOBAL', 'CanFd', SetupData.CanFd);
+ini_file.WriteBool('GLOBAL', 'CanFifoOvClear', SetupData.CanFifoOvClear); 
+ini_file.WriteBool('GLOBAL', 'CanFifoOvMessages', SetupData.CanFifoOvMessages);
 ini_file.WriteInteger('GLOBAL', 'DataClearMode', SetupData.DataClearMode);
 ini_file.WriteInteger('GLOBAL', 'RxDBufferSize', SetupData.RxDBufferSize);
 ini_file.WriteBool('GLOBAL', 'RxDEnableDynamic', SetupData.RxDEnableDynamic);
 ini_file.WriteInteger('GLOBAL', 'RxDLimit', SetupData.RxDLimit);
 end;
-
 
 end.

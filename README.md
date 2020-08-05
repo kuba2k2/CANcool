@@ -1,5 +1,5 @@
 # CANcool
-Open Source CAN bus Analyser and Simulation Software
+Open Source CAN bus Analyser and Simulation Software with CAN-FD support
 
 Features:
 * Multithreading makes the  Can-Trace happy without any data lost

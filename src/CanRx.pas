@@ -32,10 +32,10 @@ const
   MaxCanMemListSize  =    100000;
 
 type
-  TCanMsgList = array[0..MaxCanListSize] of TCanMsg;
-  PCanMsgList = ^TCanMsgList;
+  TCanMsgList = array[0..MaxCanListSize] of TCanFdMsg;
+  PCanFdMsgList = ^TCanMsgList;
   
-  TCanMemList = array[0..MaxCanMemListSize] of PCanMsgList;
+  TCanMemList = array[0..MaxCanMemListSize] of PCanFdMsgList;
   PCanMemList = ^TCanMemList;
 
   TSaveThread = class;
@@ -52,7 +52,7 @@ type
     TraceFileName: String;
   protected
     procedure BufferFree;
-    function GetCanMsg(index: Integer): PCanMsg;
+    function GetCanMsg(index: Integer): PCanFdMsg;
     procedure SetCapacity;
     procedure SetClumpSize(value: Integer);
     procedure SetMaxClumps(value: Integer);
@@ -66,9 +66,9 @@ type
     SaveThread : TSaveThread;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function Add(can_msg: PCanMsg): Integer;
+    function Add(can_msg: PCanFdMsg): Integer;
     procedure Clear;
-    function ReadCanMsg(index: Integer; var msg: TCanMsg): Integer;
+    function ReadCanMsg(index: Integer; var msg: TCanFdMsg): Integer;
     function SaveToFile(filename: String): Integer;
   published
     property Count: Integer read FCount;
@@ -103,7 +103,7 @@ end;
 
 procedure TRxCanList.BufferFree;
 var i: Integer;
-    msgs: PCanMsgList;
+    msgs: PCanFdMsgList;
     
 begin
 if FCanMemList <> nil then
@@ -136,9 +136,9 @@ inherited Destroy;
 end;
 
 
-function TRxCanList.GetCanMsg(index: Integer): PCanMsg;
+function TRxCanList.GetCanMsg(index: Integer): PCanFdMsg;
 var idx, clump: Integer;
-    msgs: PCanMsgList;
+    msgs: PCanFdMsgList;
 
 begin
 If (FCanMemList <> nil) and (index < FCount) and (index >= 0) then
@@ -153,9 +153,9 @@ else
 end;
 
 
-function TRxCanList.ReadCanMsg(index: Integer; var msg: TCanMsg): Integer;
+function TRxCanList.ReadCanMsg(index: Integer; var msg: TCanFdMsg): Integer;
 var idx, clump: Integer;
-    msgs: PCanMsgList;
+    msgs: PCanFdMsgList;
 
 begin
 Result := -1;
@@ -170,7 +170,7 @@ If (FCanMemList <> nil) and (index < FCount) and (index >= 0) then
   idx := index mod FClumpSize; 
   clump := index div FClumpSize;
   msgs := FCanMemList[clump];
-  Move(msgs[idx], msg, SizeOf(TCanMsg));
+  Move(msgs[idx], msg, SizeOf(TCanFdMsg));
   Result := 0;
   end;  
 RxCanLeaveCritical;
@@ -189,7 +189,7 @@ if Lock then
 Lock := TRUE;
 RxCanLeaveCritical;
 BufferFree;
-FCanMemList := AllocMem(FMaxClumps * SizeOf(PCanMsgList));
+FCanMemList := AllocMem(FMaxClumps * SizeOf(PCanFdMsgList));
 TotalBufferSize := FClumpSize * FMaxClumps;
 Grow;
 RxCanEnterCritical;
@@ -223,13 +223,13 @@ end;
 
 
 function TRxCanList.Grow: Boolean;
-var mem: PCanMsgList;
+var mem: PCanFdMsgList;
 
 begin;
 result := FALSE;
 if (FCanMemList = nil) or (FUsedClumps >= FMaxClumps) then
   exit; 
-mem := AllocMem(FClumpSize * SizeOf(TCanMsg));
+mem := AllocMem(FClumpSize * SizeOf(TCanFdMsg));
 if mem = nil then
   exit;
 FCanMemList[FUsedClumps] := mem;
@@ -239,9 +239,9 @@ result := TRUE;
 end;
 
 
-function TRxCanList.Add(can_msg: PCanMsg): Integer;
+function TRxCanList.Add(can_msg: PCanFdMsg): Integer;
 var idx, clump: Integer;
-    msgs: PCanMsgList;
+    msgs: PCanFdMsgList;
     
 begin
 result := -1;
@@ -262,14 +262,14 @@ idx := (FCount-1) mod FClumpSize;
 clump := (FCount-1) div FClumpSize;
 msgs := FCanMemList[clump];    
 if can_msg <> nil then
-  Move(can_msg^, msgs[idx], SizeOf(TCanMsg));
+  Move(can_msg^, msgs[idx], SizeOf(TCanFdMsg));
 result := FCount;  
 end;
 
 
 procedure TRxCanList.Clear;
 var i: Integer;
-    msgs: PCanMsgList;
+    msgs: PCanFdMsgList;
 
 begin
 RxCanEnterCritical;
@@ -350,7 +350,7 @@ end;
 
 
 function TRxCanList.SaveToFileInt: Integer;
-var can_msg: PCanMsg;
+var can_msg: PCanFdMsg;
     str: string[250];
     d, len: Byte;
     dlc, i, ii, last_pos, p: integer;
@@ -405,12 +405,12 @@ try
       result := -1;
       break;
       end;
-    dlc := can_msg^.Flags and FlagsCanLength;
-    if (can_msg^.Flags and FlagsCanEFF) > 0 then
+    dlc := can_msg^.Length;
+    if (can_msg^.Flags and FlagCanFdEFF) > 0 then
       eff := True
     else
       eff := False;
-    if (can_msg^.Flags and FlagsCanRTR) > 0 then
+    if (can_msg^.Flags and FlagCanFdRTR) > 0 then
       rtr := True
     else
       rtr := False;    

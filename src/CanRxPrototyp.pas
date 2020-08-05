@@ -32,7 +32,7 @@ type
     WindowMenuItem: TMenuItem;
   public
     { Public-Deklarationen }
-    procedure RxCanMessages(can_msg: PCanMsg; count: Integer); virtual;
+    procedure RxCanMessages(can_msg: PCanFdMsg; count: Integer); virtual;
     procedure RxCanUpdate; virtual;
     procedure SaveConfig(ConfigList: TStrings); virtual;
     procedure LoadConfig(ConfigList: TStrings); virtual;
@@ -66,7 +66,7 @@ Action := caFree;
 end;
 
 
-procedure TCanRxPrototypForm.RxCanMessages(can_msg: PCanMsg; count: Integer);
+procedure TCanRxPrototypForm.RxCanMessages(can_msg: PCanFdMsg; count: Integer);
 
 begin
   ;

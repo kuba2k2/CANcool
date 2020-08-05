@@ -31,7 +31,7 @@ const
 
 type
   TTxCanMsg = record
-    CanMsg: TCanMsg;
+    CanMsg: TCanFdMsg;
     TxMode: Integer;
     TriggerId : longword;
     Intervall: longword;
@@ -59,7 +59,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Transmit(index: integer);
-    procedure RxMessage(rx_msg: PCanMsg);
+    procedure RxMessage(rx_msg: PCanFdMsg);
     function Add(can_msg: PTxCanMsg): Integer;
     procedure Delete(index: Integer);
     procedure Clear;
@@ -116,7 +116,7 @@ for i := 0 to FCount-1 do
       begin;  // Timer ist abgelaufen
       timer := can_msg^.Intervall;
       // CAN Nachricht senden
-      MainWin.TinyCAN.CanTransmit(MainWin.CanDeviceIndex, @can_msg^.CanMsg, 1);
+      MainWin.TinyCAN.CanFdTransmit(MainWin.CanDeviceIndex, @can_msg^.CanMsg, 1);
       end
     else
       timer := can_msg^.Timer - LastSleepTime;
@@ -130,7 +130,7 @@ FIntTimer.Interval := sleep_time;
 end;
 
 
-procedure TTxCanList.RxMessage(rx_msg: PCanMsg);
+procedure TTxCanList.RxMessage(rx_msg: PCanFdMsg);
 var can_msg :PTxCanMsg;
     i : Integer;
     tx : Boolean;
@@ -144,7 +144,7 @@ for i := 0 to FCount-1 do
   tx := False;
   if can_msg.TxMode = 2 then      // RTR
     begin;
-    if ((rx_msg.Flags and FlagsCanRTR) > 0) and (can_msg^.CanMsg.ID = rx_msg.ID) then
+    if ((rx_msg.Flags and FlagCanFdRTR) > 0) and (can_msg^.CanMsg.ID = rx_msg.ID) then
       tx := True;
     end
   else if can_msg.TxMode = 3 then // Trigger ID
@@ -156,7 +156,7 @@ for i := 0 to FCount-1 do
     begin;
     can_msg^.Timer := can_msg^.Intervall;   // Interval Timer rÃ¼cksetzen
     // CAN Nachricht senden
-    MainWin.TinyCAN.CanTransmit(MainWin.CanDeviceIndex, @can_msg^.CanMsg, 1);    
+    MainWin.TinyCAN.CanFdTransmit(MainWin.CanDeviceIndex, @can_msg^.CanMsg, 1);    
     end;
   end;
 end;
@@ -171,7 +171,7 @@ if can_msg = nil then
   exit;
 can_msg^.Timer := can_msg^.Intervall;   // Interval Timer zurücksetzen
 // CAN Nachricht senden
-MainWin.TinyCAN.CanTransmit(MainWin.CanDeviceIndex, @can_msg^.CanMsg, 1);
+MainWin.TinyCAN.CanFdTransmit(MainWin.CanDeviceIndex, @can_msg^.CanMsg, 1);
 end;
 
 
@@ -230,7 +230,7 @@ end;
 
 function TTxCanList.SaveToFile(filename: String): Integer;
 var tx_msg: PTxCanMsg;
-    can_msg: PCanMsg;
+    can_msg: PCanFdMsg;
     str: string[250];
     txm_str: string[20];
     line: string;
@@ -248,12 +248,12 @@ try
     begin
     tx_msg := @FCanMsgs[i];
     can_msg := @tx_msg^.CanMsg;
-    dlc := can_msg^.Flags and FlagsCanLength;
-    if (can_msg^.Flags and FlagsCanEFF) > 0 then
+    dlc := can_msg^.Length;
+    if (can_msg^.Flags and FlagCanFdEFF) > 0 then
       eff := True
     else
       eff := False;
-    if (can_msg^.Flags and FlagsCanRTR) > 0 then
+    if (can_msg^.Flags and FlagCanFdRTR) > 0 then
       rtr := True
     else
       rtr := False;
@@ -336,9 +336,9 @@ try
     // *** Frame Type lesen
     item := UpperCase(ExtractSubstr(line, p, Delims));
     if Pos('EFF', item) <> 0 then
-      tx_msg.CanMsg.Flags := tx_msg.CanMsg.Flags or FlagsCanEFF;
+      tx_msg.CanMsg.Flags := tx_msg.CanMsg.Flags or FlagCanFdEFF;
     if Pos('RTR', item) <> 0 then
-      tx_msg.CanMsg.Flags := tx_msg.CanMsg.Flags or FlagsCanRTR;
+      tx_msg.CanMsg.Flags := tx_msg.CanMsg.Flags or FlagCanFdRTR;
     // **** ID
     item := ExtractSubstr(line, p, Delims);
     tx_msg.CanMsg.ID := StrToHex(item);

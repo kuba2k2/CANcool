@@ -2,8 +2,8 @@
                       CanBitValueForm.pas  -  description
                              -------------------
     begin             : 03.12.2012
-    last modified     : 27.02.2016     
-    copyright         : (C) 2012 - 2016 by MHS-Elektronik GmbH & Co. KG, Germany
+    last modified     : 30.05.2020     
+    copyright         : (C) 2012 - 2020 by MHS-Elektronik GmbH & Co. KG, Germany
                                http://www.mhs-elektronik.de    
     autho             : Klaus Demlehner, klaus@mhs-elektronik.de
  ***************************************************************************}
@@ -52,7 +52,11 @@ type
     DataChange: Boolean;
     Data: array[0..7] of Byte;
     WidgetAktiv: boolean;
-    CanId: longword;  
+    CanId: longword;
+    MuxEnable: boolean;
+    MuxDlc: Byte;
+    MuxCanMask: array[0..7] of Byte;
+    MuxCanData: array[0..7] of Byte;      
     BitConfListe: TList;
     LEDS: TObjectList;
     procedure Lock;
@@ -63,7 +67,7 @@ type
     procedure BitConfListeClear(liste: TList);
     procedure BitConfListeAdd(liste: TList; Name: String;
       LedColor: TColor; BytePos, BitPos: Byte);
-    procedure RxCanMessages(can_msg: PCanMsg; count: Integer); override;
+    procedure RxCanMessages(can_msg: PCanFdMsg; count: Integer); override;
     procedure RxCanUpdate; override;               
     procedure LoadConfig(ConfigList: TStrings); override;
     procedure SaveConfig(ConfigList: TStrings); override;
@@ -80,7 +84,9 @@ uses CanBitValueSetupForm;
 
 
 procedure TCanBitValueWin.FormCreate(Sender: TObject);
-
+var
+  i: integer;
+  
 begin
 inherited;
 BitConfListe := TList.Create;
@@ -89,6 +95,13 @@ LEDS := TObjectList.Create;
 WidgetAktiv := True;
 LockStatus := False;
 CanId := 0;
+MuxEnable := False;
+MuxDlc := 8;
+for i := 0 to 7 do
+  begin;
+  MuxCanMask[i] := 0;
+  MuxCanData[i] := 0;
+  end;
 end;
 
 
@@ -161,6 +174,27 @@ begin
 Lock;
 self.Caption := ReadListString(ConfigList, 'Name', self.Caption);
 CanId := ReadListInteger(ConfigList, 'CanId', CanId);
+MuxDlc := ReadListInteger(ConfigList, 'MuxDlc', 8);
+MuxCanMask[0] := ReadListInteger(ConfigList, 'MuxCanMask0', 0);
+MuxCanMask[1] := ReadListInteger(ConfigList, 'MuxCanMask1', 0);
+MuxCanMask[2] := ReadListInteger(ConfigList, 'MuxCanMask2', 0);
+MuxCanMask[3] := ReadListInteger(ConfigList, 'MuxCanMask3', 0);
+MuxCanMask[4] := ReadListInteger(ConfigList, 'MuxCanMask4', 0);
+MuxCanMask[5] := ReadListInteger(ConfigList, 'MuxCanMask5', 0);
+MuxCanMask[6] := ReadListInteger(ConfigList, 'MuxCanMask6', 0);
+MuxCanMask[7] := ReadListInteger(ConfigList, 'MuxCanMask7', 0);
+MuxCanData[0] := ReadListInteger(ConfigList, 'MuxCanData0', 0);
+MuxCanData[1] := ReadListInteger(ConfigList, 'MuxCanData1', 0);
+MuxCanData[2] := ReadListInteger(ConfigList, 'MuxCanData2', 0);
+MuxCanData[3] := ReadListInteger(ConfigList, 'MuxCanData3', 0);
+MuxCanData[4] := ReadListInteger(ConfigList, 'MuxCanData4', 0);
+MuxCanData[5] := ReadListInteger(ConfigList, 'MuxCanData5', 0);
+MuxCanData[6] := ReadListInteger(ConfigList, 'MuxCanData6', 0);
+MuxCanData[7] := ReadListInteger(ConfigList, 'MuxCanData7', 0);
+if ReadListInteger(ConfigList, 'MuxEnable', 0) > 0 then 
+  MuxEnable := True
+else
+  MuxEnable := False;
 BitConfListeClear(BitConfListe);
 for i := 0 to ConfigList.Count-1 do
   begin
@@ -177,7 +211,7 @@ for i := 0 to ConfigList.Count-1 do
       Item := ExtractSubstr(Str, Pos, Delims);
       case Idx of
         1: Name := Item;
-        2: LedColor := TColor(StrToInt(Item));  //StringToColor(Item); <*>
+        2: LedColor := TColor(StrToInt(Item));
         3: BytePos := StrToInt(Item);
         4: BitPos := StrToInt(Item);
         end;
@@ -201,12 +235,32 @@ var
 begin
 ConfigList.Append(format('Name=%s', [self.Caption]));
 ConfigList.Append(format('CanId=%u', [CanId]));
+ConfigList.Append(format('MuxDlc=%u', [MuxDlc]));
+ConfigList.Append(format('MuxCanMask0=%u', [MuxCanMask[0]]));
+ConfigList.Append(format('MuxCanMask1=%u', [MuxCanMask[1]]));
+ConfigList.Append(format('MuxCanMask2=%u', [MuxCanMask[2]]));
+ConfigList.Append(format('MuxCanMask3=%u', [MuxCanMask[3]]));
+ConfigList.Append(format('MuxCanMask4=%u', [MuxCanMask[4]]));
+ConfigList.Append(format('MuxCanMask5=%u', [MuxCanMask[5]]));
+ConfigList.Append(format('MuxCanMask6=%u', [MuxCanMask[6]]));
+ConfigList.Append(format('MuxCanMask7=%u', [MuxCanMask[7]]));
+ConfigList.Append(format('MuxCanData0=%u', [MuxCanData[0]]));
+ConfigList.Append(format('MuxCanData1=%u', [MuxCanData[1]]));
+ConfigList.Append(format('MuxCanData2=%u', [MuxCanData[2]]));
+ConfigList.Append(format('MuxCanData3=%u', [MuxCanData[3]]));
+ConfigList.Append(format('MuxCanData4=%u', [MuxCanData[4]]));
+ConfigList.Append(format('MuxCanData5=%u', [MuxCanData[5]]));
+ConfigList.Append(format('MuxCanData6=%u', [MuxCanData[6]]));
+ConfigList.Append(format('MuxCanData7=%u', [MuxCanData[7]]));
+if MuxEnable then
+  ConfigList.Append('MuxEnable=1')
+else
+  ConfigList.Append('MuxEnable=0');
 if BitConfListe.Count > 0 then
   begin;
   for i := 0 to BitConfListe.Count-1 do
     begin;
     Name := PBitConf(BitConfListe[i]).Name;
-    //LedColor := ColorToString(PBitConf(BitConfListe[i]).Color); <*>
     LedColor := Integer(PBitConf(BitConfListe[i]).Color);
     BytePos := PBitConf(BitConfListe[i]).BytePos;
     BitPos := PBitConf(BitConfListe[i]).BitPos;
@@ -243,10 +297,11 @@ FormResize(self);
 end;
 
 
-procedure TCanBitValueWin.RxCanMessages(can_msg: PCanMsg; count: Integer);
+procedure TCanBitValueWin.RxCanMessages(can_msg: PCanFdMsg; count: Integer);
 var
-  dlc, i: integer;
-  hit_msg: PCanMsg;
+  dlc, i, idx: integer;
+  hit_msg: PCanFdMsg;
+  fault: boolean;
 
 begin;
 if (not WidgetAktiv) or (count = 0) or (LockStatus) then
@@ -254,17 +309,39 @@ if (not WidgetAktiv) or (count = 0) or (LockStatus) then
 hit_msg := nil;
 for i := 1 to count do
   begin;
-  if can_msg^.ID = CanId then
-    begin
-    can_msg^.Flags := can_msg^.Flags or FlagsCanFilHit;
-    if (can_msg^.Flags and FlagsCanRTR) = 0 then
-      hit_msg := can_msg;    
+  fault := false;
+  if can_msg^.ID <> CanId then
+    fault := true;        
+  if not fault and MuxEnable and (MuxDlc > 0) then
+    begin;
+    dlc := can_msg^.Length;
+    if dlc <> MuxDlc then
+      fault := True
+    else
+      begin;
+      for idx := 0 to MuxDlc-1 do
+        begin;
+        if ((can_msg^.Data.Bytes[idx] xor MuxCanData[idx]) and MuxCanMask[idx]) <> 0 then
+          begin;
+          fault := true;
+          break;
+          end;
+        end;
+      end;      
+    end;
+  if not fault then
+    begin;
+    if (can_msg^.Flags and FlagCanFdRTR) = 0 then
+      begin;
+      can_msg^.Flags := can_msg^.Flags or FlagsCanFilHit;
+      hit_msg := can_msg;
+      end;    
     end;
   inc(can_msg);
   end;
 if hit_msg <> nil then
   begin;
-  dlc := hit_msg^.Flags and FlagsCanLength;
+  dlc := hit_msg^.Length;
   if (dlc >= 1) and (dlc <= 8) then
     begin
     for i := 0 to dlc-1 do
@@ -321,11 +398,47 @@ Form := TCanBitValueSetupWin.Create(self);
 
 Form.NameEdit.Text := self.Caption;
 Form.CANIDEdit.Number := CanId;
+Form.DLCEdit.Number := MuxDlc;
+Form.Mask8Edit.Number := MuxCanMask[7];
+Form.Mask7Edit.Number := MuxCanMask[6];
+Form.Mask6Edit.Number := MuxCanMask[5];
+Form.Mask5Edit.Number := MuxCanMask[4];
+Form.Mask4Edit.Number := MuxCanMask[3];
+Form.Mask3Edit.Number := MuxCanMask[2];
+Form.Mask2Edit.Number := MuxCanMask[1];
+Form.Mask1Edit.Number := MuxCanMask[0];
+Form.Data8Edit.Number := MuxCanData[7];
+Form.Data7Edit.Number := MuxCanData[6];
+Form.Data6Edit.Number := MuxCanData[5];
+Form.Data5Edit.Number := MuxCanData[4];
+Form.Data4Edit.Number := MuxCanData[3]; 
+Form.Data3Edit.Number := MuxCanData[2]; 
+Form.Data2Edit.Number := MuxCanData[1];
+Form.Data1Edit.Number := MuxCanData[0];
+Form.MuxEnabledCheck.Checked := MuxEnable;
 Form.SetBitConfListe(BitConfListe);
 if Form.ShowModal = mrOK then
   begin
   self.Caption := Form.NameEdit.Text;
   CanId := Form.CANIDEdit.Number;
+  MuxDlc := Form.DLCEdit.Number;            
+  MuxCanMask[7] := Form.Mask8Edit.Number;   
+  MuxCanMask[6] := Form.Mask7Edit.Number;   
+  MuxCanMask[5] := Form.Mask6Edit.Number;   
+  MuxCanMask[4] := Form.Mask5Edit.Number;   
+  MuxCanMask[3] := Form.Mask4Edit.Number;   
+  MuxCanMask[2] := Form.Mask3Edit.Number;   
+  MuxCanMask[1] := Form.Mask2Edit.Number;   
+  MuxCanMask[0] := Form.Mask1Edit.Number;   
+  MuxCanData[7] := Form.Data8Edit.Number;   
+  MuxCanData[6] := Form.Data7Edit.Number;   
+  MuxCanData[5] := Form.Data6Edit.Number;   
+  MuxCanData[4] := Form.Data5Edit.Number;   
+  MuxCanData[3] := Form.Data4Edit.Number;   
+  MuxCanData[2] := Form.Data3Edit.Number;   
+  MuxCanData[1] := Form.Data2Edit.Number;   
+  MuxCanData[0] := Form.Data1Edit.Number;   
+  MuxEnable := Form.MuxEnabledCheck.Checked;
   Form.GetBitConfListe(BitConfListe);
   CreateLEDS;
   WindowMenuItem.Caption :=  self.Caption;
@@ -346,7 +459,7 @@ end;
 procedure TCanBitValueWin.DestroyBtnClick(Sender: TObject);
 
 begin
-Lock;   // <*> ?
+Lock;
 inherited;
 close;
 end;

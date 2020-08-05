@@ -2,8 +2,8 @@
                        CanRxForm.pas  -  description
                              -------------------
     begin             : 07.01.2013
-    last modified     : 17.01.2016     
-    copyright         : (C) 2013 - 2016 by MHS-Elektronik GmbH & Co. KG, Germany
+    last modified     : 22.12.2019     
+    copyright         : (C) 2013 - 2019 by MHS-Elektronik GmbH & Co. KG, Germany
                                http://www.mhs-elektronik.de    
     autho             : Klaus Demlehner, klaus@mhs-elektronik.de
  ***************************************************************************}
@@ -93,6 +93,7 @@ type
     procedure ClearStatistikPopupClick(Sender: TObject);
   private
     { Private-Deklarationen }
+    LineHeight: Integer;
     FObjectMode: Boolean;
     FRxDetailsShow: Boolean;
     RxFilterMode: TRxMsgShowMode;
@@ -106,9 +107,9 @@ type
     RxList: TRxCanList;
     RxObjList: TRxCanObjList;
     TraceFile: String;
-    procedure RxCanMessages(can_msg: PCanMsg; count: Integer); override;
+    procedure RxCanMessages(can_msg: PCanFdMsg; count: Integer); override;
     procedure RxCanUpdate; override;    
-    procedure ExecuteCmd(cmd: Integer; can_msg: PCanMsg);
+    procedure ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg);
     property ObjectMode: Boolean read FObjectMode write SetObjectMode;
     property RxDetailsShow: Boolean read FRxDetailsShow write SetRxDetailsShow;
   end;
@@ -121,9 +122,28 @@ uses MainForm, CanTxForm;
 
 { TEmpfangForm }
 
+const
+RxViewCanObjHeaders: array[0..6,0..1] of String = (('Anzahl',        'XXXXXXXXXX'),
+                                                   ('Period [s.ms]', 'XXXXXX.XXX'),
+                                                   ('Frame',         'STD/RTR FD/BRS'),
+                                                   ('ID',            '12345678'),
+                                                   ('DLC',           '64'),
+                                                   ('DATA [HEX]',    'XX XX XX XX XX XX XX XX'),
+                                                   ('DATA [ASCII]',  'AAAAAAAA'));
+
+RxviewCanTraceHeaders: array[0..5,0..1] of String = (('Time [s.ms]',  'XXXXXX.XXX'),
+                                                     ('Frame',        'STD/RTR FD/BRS'),         
+                                                     ('ID',           '12345678'),               
+                                                     ('DLC',          '64'),
+                                                     ('DATA [HEX]',   'XX XX XX XX XX XX XX XX'),
+                                                     ('DATA [ASCII]', 'AAAAAAAA'));              
+                                                                    
+
 
 procedure TCanRxWin.SetObjectMode(mode: Boolean);
-var cnt: Integer;
+var i, col_cnt, col, row_cnt, h, w, h_max, w_max: Integer;
+    rect: TRect;
+    s: String;
 
 begin;
 FObjectMode := mode;
@@ -133,47 +153,44 @@ if mode then
     RxPanel.Visible := True
   else
     RxPanel.Visible := False;
-  cnt := RxObjList.Count + 1;
-  if cnt < 2 then
-    cnt := 2;
-  RxView.RowCount := cnt;
-  RxView.ColCount := 7;
-  RxView.ColWidths[0]:=70;
-  RxView.Cells[0,0]:='Anzahl';
-  RxView.ColWidths[1]:=80;
-  RxView.Cells[1,0]:='Period [ms]';
-  RxView.ColWidths[2]:=55;
-  RxView.Cells[2,0]:='Frame';
-  RxView.ColWidths[3]:=65;
-  RxView.Cells[3,0]:='ID';
-  RxView.ColWidths[4]:=30;
-  RxView.Cells[4,0]:='DLC';
-  RxView.ColWidths[5]:=185;
-  RxView.Cells[5,0]:='DATA [HEX]';
-  RxView.ColWidths[6]:=100;
-  RxView.Cells[6,0]:='DATA [ASCII]';
+  row_cnt := RxObjList.Count + 1;
+  col_cnt := 7;
   end
 else
   begin;
-  cnt := RxList.Count + 1;
-  if cnt < 2 then
-    cnt := 2;
-  RxView.RowCount := cnt;
-  RxView.ColCount := 6;
-  RxView.ColWidths[0]:=80;
-  RxView.Cells[0,0]:='Time [ms]';
-  RxView.ColWidths[1]:=55;
-  RxView.Cells[1,0]:='Frame';
-  RxView.ColWidths[2]:=65;
-  RxView.Cells[2,0]:='ID';
-  RxView.ColWidths[3]:=30;
-  RxView.Cells[3,0]:='DLC';
-  RxView.ColWidths[4]:=185;
-  RxView.Cells[4,0]:='DATA [HEX]';
-  RxView.ColWidths[5]:=100;
-  RxView.Cells[5,0]:='DATA [ASCII]';
+  row_cnt := RxList.Count + 1;
+  col_cnt := 6;
   RxPanel.Visible := False;
   end;
+if row_cnt < 2 then
+  row_cnt := 2;
+RxView.RowCount := row_cnt;
+RxView.ColCount := col_cnt; 
+h_max := 1;
+RxView.Canvas.Font.Assign(RxView.Font);
+for col := 0 to col_cnt - 1 do
+  begin;  
+  w_max := 1;        
+  for i := 0 to 1 do
+    begin;      
+    if mode then
+      s := RxViewCanObjHeaders[col, i]
+    else
+      s := RxviewCanTraceHeaders[col, i];
+    if i = 0 then
+      RxView.Cells[col,0] := s;
+    DrawText(RxView.Canvas.Handle, PChar(s), length(s), rect, DT_CalcRect or DT_Left);
+    w := rect.Right - rect.Left;  // Breite
+    h := rect.Bottom - rect.Top;   // Höhe
+    if w_max < w then
+      w_max := w;
+    if h_max < h then
+      h_max := h;            
+    end;
+  RxView.ColWidths[col] := w_max + 5;  
+  end;
+RxView.RowHeights[0] := h_max + 4;    
+LineHeight := h_max;  
 RxView.Refresh;
 end;
 
@@ -198,6 +215,7 @@ RxObjList := TRxCanObjList.Create(self);
 ObjectMode := False;
 RxDetailsShow := False;
 TraceFile := '';
+SetObjectMode(False);
 end;
 
 
@@ -232,13 +250,13 @@ end;
 
 
 procedure TCanRxWin.DrawStatMessage(index: Integer);
-var can_msg: PCanMsg;
+var can_msg: PCanFdMsg;
     msg_buf: TRxCanMsgObj;
     bin_str: string[200];
     ascii_str: string[200];
     bin_len, ascii_len, d: byte;
     dlc, i, ii: integer;
-    rtr, eff, err: boolean;
+    rtr, eff, err, ov: boolean;
     intervall, min, max, msg_count: DWord;
 
 begin;
@@ -255,16 +273,20 @@ intervall := msg_buf.Intervall;
 min := msg_buf.Min;
 max := msg_buf.Max;
 
-dlc := can_msg^.Flags and FlagsCanLength;
-if (can_msg^.Flags and FlagsCanError) > 0 then
+dlc := can_msg^.Length;
+if (can_msg^.Flags and FlagCanFdError) > 0 then
   err := True
 else
-  err := False;    
-if (can_msg^.Flags and FlagsCanEFF) > 0 then
+  err := False;
+if (can_msg^.Flags and FlagCanFdOV) > 0 then
+  ov := True
+else
+  ov := False;      
+if (can_msg^.Flags and FlagCanFdEFF) > 0 then
   eff := True
 else
   eff := False;
-if (can_msg^.Flags and FlagsCanRTR) > 0 then
+if (can_msg^.Flags and FlagCanFdRTR) > 0 then
   rtr := True
 else
   rtr := False;
@@ -273,6 +295,11 @@ if err then
   HeaderLabel.Caption := 'CAN Bus Fehler';
   dlc := 0;  
   end
+else if ov then
+  begin;
+  HeaderLabel.Caption := 'CAN Bus Overrun';
+  dlc := 0;
+  end  
 else if rtr and eff then
   HeaderLabel.Caption := Format('[ID:%.8X  EFF/RTR] [Count: %10u] [Period: %u  Min: %u Max: %u]',
     [can_msg^.ID, msg_count, intervall, min, max])
@@ -466,14 +493,15 @@ end;
 
 
 procedure TCanRxWin.RxViewDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
-var can_msg: PCanMsg;
-    msg_buf: TCanMsg;
+var can_msg: PCanFdMsg;
+    msg_buf: TCanFdMsg;
     msg_obj_buf: TRxCanMsgObj;
-    str: string[200];
-    d, len, err_nr, bus_stat: Byte;
-    dlc, i: integer;
-    rtr, eff: boolean;
-    ofs, timestamp, s, ms, msg_count: DWord;
+    str: string;
+    out_rect: TRect;
+    d, err_nr, bus_stat: Byte;
+    dlc, i, y, data_lines, char_cnt: integer;
+    rtr, eff, fd, brs: boolean;
+    ofs, timestamp, s, ms, msg_count, lost_msgs: DWord;
 
 begin
 if ARow = 0 then
@@ -494,8 +522,7 @@ msg_count := 0;
 if FObjectMode then
   begin;
   if RxObjList.ReadCanMsg(ARow-1, msg_obj_buf) < 0 then
-    begin;
-    RxView.Canvas.TextOut(Rect.Left+1, Rect.Top+2, str);
+    begin;    
     DrawStatMessage(-1);
     exit;
     end;
@@ -508,7 +535,7 @@ if FObjectMode then
 else
   begin;
   if RxList.ReadCanMsg(ARow-1, msg_buf) < 0 then
-    begin;
+    begin;    
     RxView.Canvas.TextOut(Rect.Left+1, Rect.Top+2, str);
     exit;
     end;  
@@ -516,12 +543,43 @@ else
   ofs := (RxList.FirstTime.USec div 1000) + (RxList.FirstTime.Sec * 1000);
   timestamp := (can_msg^.Time.USec div 1000) + (can_msg^.Time.Sec * 1000) - ofs;
   end;
-
-if (can_msg^.Flags and FlagsCanError) > 0 then
+// **** OV Frame anzeigen
+if (can_msg^.Flags and FlagCanFdOV) > 0 then
+  begin
+  RxView.Canvas.Font.Color := clFuchsia;
+  case ACol of       
+    0 : begin;
+        s := timestamp div 1000;            // Timestamp
+        ms := timestamp mod 1000;
+        str := format('%6u.%.3u', [s,ms]);
+        end;
+    1 : str := 'OV';                        // Frame Format
+    2 : str := '';                          // ID
+    3 : str := '';                          // DLC
+    4 : begin;                              // Daten (Hex)
+        err_nr := can_msg^.Data.Bytes[0];
+        lost_msgs := can_msg^.Data.Bytes[1] and (can_msg^.Data.Bytes[2] shl $08);
+        if (err_nr > 0) and (err_nr < 4) then
+          str := format('[%u] Messages-Lost: %u', [err_nr, lost_msgs])
+        else
+          str := 'Unbek. Fehler';
+        end;
+    5 : str := '';                          // Daten (ASCII)      
+    end;
+  RxView.RowHeights[ARow] := LineHeight;
+  RxView.Canvas.TextOut(Rect.Left+1, Rect.Top+2, str);
+  exit;
+  end;  
+// **** Fehler anzeigen
+if (can_msg^.Flags and FlagCanFdError) > 0 then
   begin;  // Fehler
-   RxView.Canvas.Font.Color := clRed;
+  RxView.Canvas.Font.Color := clRed;
   case ACol of
-    0 : str := format('%u', [timestamp]);   // Timestamp
+    0 : begin;
+        s := timestamp div 1000;            // Timestamp
+        ms := timestamp mod 1000;
+        str := format('%6u.%.3u', [s,ms]);
+        end;    
     1 : str := 'ERROR';                     // Frame Format
     2 : str := '';                          // ID
     3 : str := '';                          // DLC
@@ -539,22 +597,48 @@ if (can_msg^.Flags and FlagsCanError) > 0 then
         else
           str := '';                          // Daten (ASCII)
         end;
-  end;
+    end;
+  RxView.RowHeights[ARow] := LineHeight;
   RxView.Canvas.TextOut(Rect.Left+1, Rect.Top+2, str);
   exit;
   end;
 
 if (can_msg^.Flags and FlagsCanFilHit) > 0 then
   RxView.Canvas.Font.Color := clLime;
-dlc := can_msg^.Flags and FlagsCanLength;
-if (can_msg^.Flags and FlagsCanEFF) > 0 then
+dlc := can_msg^.Length;
+if (can_msg^.Flags and FlagCanFdEFF) > 0 then
   eff := True
 else
   eff := False;
-if (can_msg^.Flags and FlagsCanRTR) > 0 then
+if (can_msg^.Flags and FlagCanFdRTR) > 0 then
   rtr := True
 else
   rtr := False;
+if (can_msg^.Flags and FlagCanFdFD) > 0 then
+  fd := True
+else  
+  fd := False;
+if (can_msg^.Flags and FlagCanFdBRS) > 0 then
+  brs := True
+else
+  brs := False;  
+// Zellenhöhe bestimmen
+if rtr or (dlc = 0) then
+  data_lines := 1
+else
+  begin;
+  data_lines := dlc div 8; 
+  if (dlc mod 8) > 0 then
+    inc(data_lines); 
+  end;
+          
+y := (LineHeight * data_lines) + 4;  
+RxView.RowHeights[ARow] := y;
+out_rect.Left := Rect.Left + 1;
+out_rect.Top := Rect.Top + 2;
+out_rect.Bottom := Rect.Top + y;
+out_rect.Right := Rect.Right;
+   
 if FObjectMode then
   begin;
   if ACol = 0 then
@@ -562,12 +646,10 @@ if FObjectMode then
   dec(ACol);
   end;
 case ACol of
-  0 : begin        // Timestamp
-      //str := format('%u', [timestamp]); <*>
+  0 : begin        // Timestamp      
       s := timestamp div 1000;
       ms := timestamp mod 1000;
-      str := format('%6u.%.3u', [s,ms]);
-      
+      str := format('%6u.%.3u', [s,ms]);    
       end;
   1 : begin;                         // Frame Format
       if rtr and eff then
@@ -578,6 +660,10 @@ case ACol of
         str := 'STD/RTR'
       else
         str := 'STD';
+      if fd and brs then
+        str := str + ' FD/BRS'
+      else if fd then
+        str := str + ' FD';
       end;
   2 : begin;
       if eff then
@@ -588,57 +674,60 @@ case ACol of
   3 : str := format('%u',[dlc]);     // DLC
   4 : begin;                          // Daten (Hex)
       if (dlc > 0) and not rtr then
-        begin;
-        len := 0;
-        for i := 0 to dlc-1 do
+        begin;    
+        char_cnt := 0;
+        for i := 0 to dlc - 1 do
           begin;
           d := can_msg^.Data.Bytes[i];
-          if i > 0 then
-            begin
-            inc(len);
-            str[len] := ' ';
-            end;
-          inc(len);
-          str[len] := HexDigits[d SHR $04];
-          inc(len);
-          str[len] := HexDigits[d AND $0F];
+          if char_cnt > 0 then          
+            str := str + ' ';                    
+          if char_cnt = 8 then
+            begin;
+            str := str + chr($0D) + chr($0A);          
+            char_cnt := 0;
+            end;  
+          str := str + HexDigits[d SHR $04] + HexDigits[d AND $0F];        
+          inc(char_cnt);
           end;
-        str[0] := Char(len);
         end
       else
         str := '';
       end;
   5 : begin;       // Daten (ASCII)
       if (dlc > 0) and not rtr then
-        begin;
-        len := 0;
+        begin;        
+        char_cnt := 0;
         for i := 0 to dlc-1 do
-          begin;
-          inc(len);
+          begin;   
+          if char_cnt = 8 then
+            begin;
+            str := str + chr($0D) + chr($0A);            
+            char_cnt := 0;
+            end;                   
           d := can_msg^.Data.Bytes[i];
           if chr(d) in [chr(32)..chr(126)] then
-            str[len] := chr(d)
+            str := str + chr(d)
           else
-            str[len] := '.';
-          end;
-        str[0] := Char(len);
+            str := str + '.';
+          inc(char_cnt);           
+          end;        
         end
       else
         str := '';
       end;
   end;
-RxView.Canvas.TextOut(Rect.Left+1, Rect.Top+2, str);
+DrawText(RxView.Canvas.Handle, PChar(str), length(str), out_rect, DT_Left);
 end;
 
 
-procedure TCanRxWin.RxCanMessages(can_msg: PCanMsg; count: Integer);
+procedure TCanRxWin.RxCanMessages(can_msg: PCanFdMsg; count: Integer);
 var i: Integer;
 
 begin
 if (not EnableTrace) or (count = 0) then
   exit;
 for i := 1 to count do
-  begin;  
+  begin;
   if RxFilterMode = RxMsgShowUsed then
     begin;
     if (can_msg^.Flags and FlagsCanFilHit) = 0 then
@@ -678,7 +767,7 @@ RxView.Refresh;
 end;
 
 
-procedure TCanRxWin.ExecuteCmd(cmd: Integer; can_msg: PCanMsg);
+procedure TCanRxWin.ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg);
 
 begin;
 case cmd of
@@ -743,8 +832,8 @@ end;
 
 
 procedure TCanRxWin.AddMsgToTxWinPopupClick(Sender: TObject);
-var can_msg: PCanMsg;
-    msg_buf: TCanMsg;
+var can_msg: PCanFdMsg;
+    msg_buf: TCanFdMsg;
     msg_obj_buf: TRxCanMsgObj;
 
 begin
@@ -763,7 +852,7 @@ else
     exit;
   can_msg := @msg_buf;      
   end;
-if (can_msg^.Flags and FlagsCanError) > 0 then
+if (can_msg^.Flags and FlagCanFdError) > 0 then
   exit;  // Fehler Message
 if Assigned(MainWin.CanTxWin) then
   MainWin.CanTxWin.ExecuteCmd(TX_WIN_ADD_MESSAGE, can_msg);

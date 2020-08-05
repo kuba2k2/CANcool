@@ -2,8 +2,8 @@
                          MainForm.pas  -  description
                              -------------------
     begin             : 07.01.2013
-    last modified     : 27.02.2016     
-    copyright         : (C) 2013 - 2016 by MHS-Elektronik GmbH & Co. KG, Germany
+    last modified     : 30.05.2020     
+    copyright         : (C) 2013 - 2020 by MHS-Elektronik GmbH & Co. KG, Germany
                                http://www.mhs-elektronik.de    
     autho             : Klaus Demlehner, klaus@mhs-elektronik.de
  ***************************************************************************}
@@ -26,13 +26,13 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, ComCtrls, IniFiles, StdCtrls, ExtCtrls, Buttons,
   ToolWin, Grids, StrUtils, ImgList, TinyCanDrv, XLAboutDialog, CanRx, CanRxForm,
-  CanTxForm, jpeg;
+  CanTxForm, CanFdTxForm, jpeg, Just1_32;
 
 const
   RX_EVENT: DWORD = $00000001;
   RxMsgBufferSize: Cardinal = 4096;
 
-  CANBaudParameter: array [0..8] of String =
+  CanNSpeedsStrings: array [0..8] of String =
        (' 10 kBit/s',
         ' 20 kBit/s',
         ' 50 kBit/s',
@@ -42,6 +42,15 @@ const
         '500 kBit/s',
         '800 kBit/s',
         '  1 MBit/s');
+        
+  CanDSpeedStrings: array[0..6] of String =
+       ('250 kBit/s',
+        '500 kBit/s',
+        '  1 MBit/s',
+        '1,5 MBit/s',
+        '  2 MBit/s',
+        '  3 MBit/s',
+        '  4 MBit/s');
 
   DrvStatusStrings: array[0..8] of String =
      ('Treiber DLL nicht geladen',         // Die Treiber DLL wurde noch nicht geladen
@@ -145,6 +154,7 @@ type
     ShowToolBarMnu: TMenuItem;
     CanResetBtn: TToolButton;
     LomCheckBtn: TToolButton;
+    JustOne: TJustOne32;
     procedure FormCreate(Sender: TObject);
     procedure StatusBarDrawPanel(StatusBar: TStatusBar; Panel: TStatusPanel; const Rect: TRect);
     procedure FormShow(Sender: TObject);
@@ -203,8 +213,10 @@ type
     ProjectFile: String;
     CanRxWin: TCanRxWin;
     CanTxWin: TCanTxWin;
+    CanFdTxWin: TCanFdTxWin;
     TinyCanEvent: Pointer;
     CanDeviceIndex: DWORD;
+    procedure SetupTxWindow;
     procedure RxCanUpdate;
     function MDIClientNew(ClientForm: TFormClass): TForm;
     function  MenuMDIClientHinzufuegen(Sender: TForm): TMenuItem;
@@ -224,22 +236,30 @@ type
   TComThread = class(TThread)
   private
     Owner: TMainWin;
+    CanEventsLock: Boolean;
   protected
     procedure Execute; override;
   public
+    RxMsgBuffer: PCanFdMsg;
     TinyCanEvent: Pointer;
+    procedure DisableCanEvents;
+    procedure EnableCanEvents;
     constructor Create(AOwner: TMainWin);
     destructor Destroy; override;
   end;
 
   TSyncThread = class(TThread)
   private
+    EventsLock: Boolean;
     Owner: TMainWin;
     SyncEvent: THandle;
   protected
+    procedure SyncFunc;
     procedure Execute; override;
   public
     procedure SetSync;
+    procedure DisableSync;
+    procedure EnableSync;
     constructor Create(AOwner: TMainWin);
     destructor Destroy; override;
   end;
@@ -254,9 +274,6 @@ implementation
 uses
   Util, Setup, CanRxPrototyp, CanGaugeForm, CanValueForm, CanBitValueForm, NewChild;
 
-var
-  RxMsgBuffer: PCanMsg;
-
 { TMainWin }
 
 procedure TMainWin.FormCreate(Sender: TObject);
@@ -264,7 +281,7 @@ var cfg: TIniFile;
 
 begin;
 InitUtil;
-RxMsgBuffer := AllocMem(RxMsgBufferSize * SizeOf(TCanMsg));
+SyncThread := TSyncThread.Create(self);
 DataRecord := RecordStop;
 //StatusBar.Font.Style := [];
 cfg := TIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
@@ -322,7 +339,6 @@ if ProjectFile <> '' then
     MessageDlg('Projekt (' + ProjectFile + ') kann nicht gespeichert werden', mtError, [mbOk], 0);
   end;
 DestroyUtil;
-FreeMem(RxMsgBuffer);
 end;
 
 
@@ -360,7 +376,7 @@ if MDIChildCount > 0 then
     form := MDIChildren[i];
     if (form is TCanRxPrototypForm) then
       begin;
-      if (form <> CanRxWin) and (form <> CanTxWin) then
+      if (form <> CanRxWin) and (form <> CanTxWin) and (form <> CanFdTxWin) then
         TCanRxPrototypForm(form).close;
       end;
     end;
@@ -371,15 +387,8 @@ CanRxWin.Left := 2;
 CanRxWin.Top := 2;
 CanRxWin.Width := 600;
 CanRxWin.Height := 303;
-if not Assigned(CanTxWin) then
-  CanTxWin := TCanTxWin(MDIClientNew(TCanTxWin));
-CanTxWin.Left := 2;
-CanTxWin.Top := 309;
-CanTxWin.Width := 880;
-CanTxWin.Height := 254;
-
 CanRxWin.Show;
-CanTxWin.Show;
+SetupTxWindow;
 end;
 
 
@@ -392,7 +401,6 @@ var i: integer;
     Form: TForm;
 
 begin
-NewProject;
 SectionsListe := TStringList.Create;
 ConfigList := TStringList.Create;
 result := TRUE;
@@ -400,6 +408,7 @@ ini_file := TIniFile.Create(filename);
 try
   try
     LoadSetup(ini_file);
+    NewProject;
     Left := ini_file.ReadInteger('MainWin', 'XPos', 0);
     Top := ini_file.ReadInteger('MainWin', 'YPos', 0);
     Width := ini_file.ReadInteger('MainWin', 'Width', 1100);
@@ -412,10 +421,20 @@ try
         form_class := GetClass(ini_file.ReadString(SectionsListe.Strings[i], 'Type', ''));
         if form_class <> nil then
           begin
-          if form_class = TCanRxWin then
-            form := CanRxWin
+          if form_class = TCanRxWin then          
+            form := CanRxWin          
           else if form_class = TCanTxWin then
-            form := CanTxWin
+            begin;
+            if CanTxWin = nil then
+              continue;
+            form := CanTxWin;
+            end
+          else if form_class = TCanFdTxWin then
+            begin;
+            if CanFdTxWin = nil then
+              continue;
+            form := CanFdTxWin;
+            end            
           else
             form := MDIClientNew(TFormClass(form_class));
           form.Left := ini_file.ReadInteger(SectionsListe.Strings[i], 'XPos', 0);
@@ -503,7 +522,7 @@ try
       end;
   except
     result := FALSE;
-    end;      
+    end;
 finally
   ConfigList.Free;
   ini_file.Free;
@@ -548,11 +567,13 @@ var trace_clear: boolean;
 begin;
 trace_clear := FALSE;
 open_run := 0;
+if Assigned(ComThread) then
+  ComThread.DisableCanEvents;
+SyncThread.DisableSync;
 if mode > 0 then
   begin;
   trace_clear := TRUE;
-  ComThreadTerminate;    // muss vor SyncThreadTerminate aufgerufen werden
-  SyncThreadTerminate;
+  ComThreadTerminate;
   if SetupData.Driver = 0 then
     TinyCAN.TreiberName := 'mhstcan.dll'   // Tiny-CAN
   else
@@ -564,16 +585,19 @@ if mode > 0 then
   else
     TinyCan.BaudRate := TSerialBaudRate(SetupData.BaudRate+1);
   TinyCan.DeviceSnr := SetupData.HardwareSnr;
+  TinyCan.FdMode := SetupData.CanFd;
+  TinyCan.CanFifoOvClear := SetupData.CanFifoOvClear;
+  TinyCan.CanFifoOvMessages := SetupData.CanFifoOvMessages;
   if TinyCAN.LoadDriver = 0 then
     begin
     TinyCAN.CanExCreateDevice(CanDeviceIndex, '');
     TinyCanEvent := TinyCAN.CanExCreateEvent;
     TinyCAN.CanExCreateFifo($80000000, 30000, TinyCanEvent, RX_EVENT, $FFFFFFFF);
-    ComThread := TComThread.Create(self);
-    SyncThread := TSyncThread.Create(self);
+    ComThread := TComThread.Create(self);    
     open_run := 2;
     end;
   end;
+SetupTxWindow();
 if Assigned(CanRxWin) then
   begin
   if CanRxWin.RxList.ClumpSize <> SetupData.RxDBufferSize then
@@ -594,8 +618,11 @@ if Assigned(CanRxWin) then
     CanRxWin.RxList.MaxClumps := SetupData.RxDLimit
   else
     CanRxWin.RxList.MaxClumps := 1;
-  end;
-TinyCan.CanSpeed := TCanSpeed(SetupData.CANSpeed);
+  end;  
+TinyCan.CanSpeed := TCanSpeed(SetupData.CANSpeed);  
+TinyCan.CanSpeedBtr := SetupData.NBTRValue;
+TinyCan.CanFdSpeed := TCanFdSpeed(SetupData.CANDataSpeed);
+TinyCan.CanFdDbtr := SetupData.DBTRValue;
 if SetupData.ShowErrorMessages then
   TinyCan.OptionsStr := 'CanErrorMsgsEnable=1'
 else
@@ -608,7 +635,61 @@ if open_run = 2 then
   ConnectHardware
 else if open_run = 1 then
   SetListenOnly;
+ComThread.EnableCanEvents;
+SyncThread.EnableSync;
 RefreshStatusBar;
+end;
+
+
+procedure TMainWin.SetupTxWindow;
+begin;
+if SetupData.CanFd then
+  begin;
+  // *** CAN Tx Window löschen
+  if CanTxWin <> nil then
+    begin;
+    TCanRxPrototypForm(CanTxWin).close;
+    CanTxWin := nil;
+    end;
+  // *** CAN-FD Tx Window erzeugen/anzeigen  
+  if CanFdTxWin <> nil then
+    begin;
+    CanFdTxWin.BringToFront;
+    CanFdTxWin.WindowState := wsNormal;
+    end
+  else
+    begin;
+    CanFdTxWin := TCanFdTxWin(MDIClientNew(TCanFdTxWin));
+    CanFdTxWin.Left := 2;
+    CanFdTxWin.Top := 309;
+    CanFdTxWin.Width := 880;
+    CanFdTxWin.Height := 254;
+    CanFdTxWin.Show;
+    end;
+  end
+else
+  begin
+  if CanFdTxWin <> nil then
+    begin;
+    TCanRxPrototypForm(CanFdTxWin).close;
+    CanFdTxWin := nil;
+    end;
+  // *** CAN Tx Window erzeugen/anzeigen
+  if CanTxWin <> nil then
+    begin;
+    CanTxWin.BringToFront;
+    CanTxWin.WindowState := wsNormal;
+    end
+  else
+    begin
+    CanTxWin := TCanTxWin(MDIClientNew(TCanTxWin));
+    CanTxWin.Left := 2;
+    CanTxWin.Top := 309;
+    CanTxWin.Width := 880;
+    CanTxWin.Height := 254;
+    CanTxWin.Show;    
+    end;    
+  end;
 end;
 
 
@@ -620,6 +701,7 @@ end;
 
 procedure TMainWin.StatusBarDrawPanel(StatusBar: TStatusBar; Panel: TStatusPanel; const Rect: TRect);
 var stat: Integer;
+    str: String;
 
 begin
   if Panel.ID = 0 then
@@ -627,10 +709,20 @@ begin
     if DrvStatus >= DRV_STATUS_CAN_RUN then
       stat := 1
     else
-      stat := 0;
+      stat := 0;      
     ConnectImages.Draw(StatusBar.Canvas, Rect.Left+1, Rect.Top, stat);
-    StatusBar.Canvas.TextOut(Rect.Left + ConnectImages.Width + 5, Rect.Top + 1,
-          CANBaudParameter[SetupData.CANSpeed]);
+    if SetupData.CANSpeed = 0 then
+      str := SetupData.NBTRBitrate
+    else
+      str := CanNSpeedsStrings[SetupData.CANSpeed - 1];
+    if SetupData.CanFd then
+      begin;
+      if SetupData.CANDataSpeed = 0 then
+        str := str + ' [' + SetupData.DBTRBitrate + ']'
+      else
+        str := str + ' [' + CanDSpeedStrings[SetupData.CANDataSpeed - 1] + ']';
+      end;                  
+   StatusBar.Canvas.TextOut(Rect.Left + ConnectImages.Width + 5, Rect.Top + 1, str);      
   end;
 end;
 
@@ -665,17 +757,6 @@ end;
 procedure TMainWin.TinyCANCanStatusEvent(Sender: TObject;
   index: Cardinal; device_status: TDeviceStatus);
 begin
-if DrvStatus >= DRV_STATUS_CAN_OPEN then
-  begin;
-  {if device_status.DrvStatus < DRV_STATUS_CAN_OPEN then
-     }
-  end;
-{if (DrvStatus <> device_status.DrvStatus) and
-  (device_status.DrvStatus >= DRV_STATUS_CAN_RUN) then
-  begin;
-  VerbindungsStat := 2;
-  StatusBar.Refresh;
-  end;}
 DrvStatus := device_status.DrvStatus;
 CanStatus := device_status.CanStatus;
 BusFailure := device_status.BusFailure;
@@ -694,8 +775,6 @@ end;
 procedure TMainWin.TinyCANCanPnPEvent(Sender: TObject; index: Cardinal;
   status: Integer);
 begin
-{if TinyCan.CanExGetDeviceCount(1) > 0 then  // <*>
-  ConnectHardware;}
 RefreshStatusBar;
 end;
 
@@ -742,7 +821,7 @@ if SaveDialog.Execute then
   if ProjectFile <> '' then
     begin;
     if not SaveProject(ProjectFile) then
-      MessageDlg('Projekt (' + ProjectFile + ') kann nicht gespeichert werden', mtError, [mbOk], 0);    
+      MessageDlg('Projekt (' + ProjectFile + ') kann nicht gespeichert werden', mtError, [mbOk], 0);
     end;
   end;
 SetProjectName;
@@ -760,8 +839,16 @@ end;
 procedure TMainWin.TxDListBtnClick(Sender: TObject);
 
 begin
-CanTxWin.BringToFront;
-CanTxWin.WindowState := wsNormal;
+if SetupData.CanFd then
+  begin;
+  CanFdTxWin.BringToFront;
+  CanFdTxWin.WindowState := wsNormal;
+  end
+else
+  begin;
+  CanTxWin.BringToFront;
+  CanTxWin.WindowState := wsNormal;
+  end;  
 end;
 
 
@@ -840,7 +927,7 @@ if SaveDialog.Execute then
       end;
     end;
   end;
-SetProjectName;  
+SetProjectName;
 end;
 
 
@@ -962,22 +1049,46 @@ end;
 
 procedure TMainWin.TxLoadMnuClick(Sender: TObject);
 begin
-if Assigned(CanTxWin) then
-  CanTxWin.ExecuteCmd(TX_WIN_LOAD, nil);
+if SetupData.CanFd then
+  begin;
+  if Assigned(CanFdTxWin) then
+    CanFdTxWin.ExecuteCmd(TX_WIN_LOAD, nil);
+  end
+else 
+  begin;
+  if Assigned(CanTxWin) then
+    CanTxWin.ExecuteCmd(TX_WIN_LOAD, nil);
+  end;     
 end;
 
 
 procedure TMainWin.TxSaveMnuClick(Sender: TObject);
 begin
-if Assigned(CanTxWin) then
-  CanTxWin.ExecuteCmd(TX_WIN_SAVE, nil);
+if SetupData.CanFd then
+  begin;
+  if Assigned(CanFdTxWin) then
+    CanFdTxWin.ExecuteCmd(TX_WIN_SAVE, nil);
+  end  
+else 
+  begin;
+  if Assigned(CanTxWin) then
+    CanTxWin.ExecuteCmd(TX_WIN_SAVE, nil);
+  end;     
 end;
 
 
 procedure TMainWin.TxClearWinMnuClick(Sender: TObject);
 begin
-if Assigned(CanTxWin) then
-  CanTxWin.ExecuteCmd(TX_WIN_CLEAR, nil);
+if SetupData.CanFd then
+  begin;
+  if Assigned(CanFdTxWin) then
+    CanFdTxWin.ExecuteCmd(TX_WIN_CLEAR, nil);
+  end
+else 
+  begin;
+  if Assigned(CanTxWin) then
+    CanTxWin.ExecuteCmd(TX_WIN_CLEAR, nil);
+  end;   
 end;
 
 
@@ -1054,16 +1165,22 @@ end;
 
 
 procedure TMainWin.TxIntervallOnBtnClick(Sender: TObject);
+var cmd: Integer;
+
 begin
 if TxIntervallOnBtn.Down then
+  cmd := TX_WIN_ENABLE_INTERVALL
+else
+  cmd := TX_WIN_DISABLE_INTERVALL;
+if SetupData.CanFd then   
   begin;
-  if Assigned(CanTxWin) then
-    CanTxWin.ExecuteCmd(TX_WIN_ENABLE_INTERVALL, nil);
+  if Assigned(CanFdTxWin) then
+    CanFdTxWin.ExecuteCmd(cmd, nil);
   end
 else
   begin;
   if Assigned(CanTxWin) then
-    CanTxWin.ExecuteCmd(TX_WIN_DISABLE_INTERVALL, nil);
+    CanTxWin.ExecuteCmd(cmd, nil);
   end;
 end;
 
@@ -1102,10 +1219,8 @@ procedure TMainWin.ComThreadTerminate;
 begin
 if Assigned(ComThread) then
   begin
-  ComThread.Terminate;
-  TinyCAN.CanExSetEvent(TinyCanEvent, MHS_EVENT_TERMINATE);
-  ComThread.WaitFor;
-  FreeAndNil(ComThread);
+  ComThread.Destroy;
+  ComThread := nil;
   end;
 end;
 
@@ -1114,10 +1229,12 @@ end;
 
 constructor TComThread.Create(AOwner: TMainWin);
 begin
-Owner := AOwner;
 inherited Create(True);  // Thread erzeugen nicht starten
+Owner := AOwner;
+CanEventsLock := TRUE;
 //Priority := tpHighest;
 Priority := tpHigher;
+CanEventsLock := False;
 FreeOnTerminate := false;
 Resume;                  // Thread starten
 end;
@@ -1132,10 +1249,28 @@ if not Terminated then
   if Owner <> nil then
     begin
     if Owner.TinyCAN <> nil then
-      Owner.TinyCAN.CanExSetEvent(TinyCanEvent, MHS_EVENT_TERMINATE);
+      Owner.TinyCAN.CanExSetEvent(Owner.TinyCanEvent, MHS_EVENT_TERMINATE);
     end;
   end;
 inherited;
+end;
+
+
+procedure TComThread.DisableCanEvents;
+
+begin;
+RxCanEnterCritical;
+CanEventsLock := TRUE;
+RxCanLeaveCritical;
+end;
+
+
+procedure TComThread.EnableCanEvents;
+
+begin;
+RxCanEnterCritical;
+CanEventsLock := FALSE;
+RxCanLeaveCritical;
 end;
 
 
@@ -1143,45 +1278,58 @@ procedure TComThread.Execute;
 var
   i, event: DWORD;
   count: Integer;
-  form: TForm;
+  form: TForm;     
 
 begin
 inherited;
-if RxMsgBuffer = nil then
-  exit;
+RxMsgBuffer := AllocMem(RxMsgBufferSize * SizeOf(TCanFdMsg));
 while not Terminated do
   begin
   event := Owner.TinyCAN.CanExWaitForEvent(Owner.TinyCanEvent, 0);
-  if event = $80000000 then
+  if (event and $80000000) > 0 then
     break;
   if event = RX_EVENT then
     begin;    
-    count := Owner.TinyCAN.CanReceive($80000000, RxMsgBuffer, RxMsgBufferSize);
+    count := Owner.TinyCAN.CanFdReceive($80000000, RxMsgBuffer, RxMsgBufferSize);
     if count > 0 then
       begin;
-      RxCanEnterCritical;      
+      RxCanEnterCritical;
+      if CanEventsLock then
+        begin;
+        RxCanLeaveCritical;
+        continue;
+        end;
       if Owner.MDIChildCount > 0 then
         begin;
         for i := 0 to Owner.MDIChildCount-1 do
           begin
           form := Owner.MDIChildren[i];
           if (form is TCanRxPrototypForm) then
-            begin;
-            if (form <> Owner.CanRxWin) and (form <> Owner.CanTxWin) then
+            begin;                  
+            if (form <> Owner.CanRxWin) and (form <> Owner.CanTxWin) and (form <> Owner.CanFdTxWin) then
               TCanRxPrototypForm(form).RxCanMessages(RxMsgBuffer, count);
             end;
           end;
         if Owner.CanRxWin <> nil then
           Owner.CanRxWin.RxCanMessages(RxMsgBuffer, count);
-        if Owner.CanTxWin <> nil then
-          Owner.CanTxWin.RxCanMessages(RxMsgBuffer, count);
+        if SetupData.CanFd then
+          begin;
+          if Owner.CanFdTxWin <> nil then
+            Owner.CanFdTxWin.RxCanMessages(RxMsgBuffer, count);
+          end  
+        else    
+          begin;    
+          if Owner.CanTxWin <> nil then
+            Owner.CanTxWin.RxCanMessages(RxMsgBuffer, count);
+          end;  
         end;
       RxCanLeaveCritical;
       if Owner.SyncThread <> nil then
         Owner.SyncThread.SetSync;
       end;
     end;
-  end;    
+  end;
+FreeMem(RxMsgBuffer);      
 end;
 
 
@@ -1190,10 +1338,9 @@ procedure TMainWin.SyncThreadTerminate;
 begin
 if Assigned(SyncThread) then
   begin
-  SyncThread.Terminate;
   SetEvent(SyncThread.SyncEvent);
-  SyncThread.WaitFor;
-  FreeAndNil(SyncThread);
+  SyncThread.Destroy;
+  SyncThread := nil;
   end;
 end;
 
@@ -1210,29 +1357,38 @@ if MDIChildCount > 0 then
     form := MDIChildren[i];
     if (form is TCanRxPrototypForm) then
       begin;
-      if (form <> CanRxWin) and (form <> CanTxWin) then
+      if (form <> CanRxWin) and (form <> CanTxWin) and (form <> CanFdTxWin) then
         TCanRxPrototypForm(form).RxCanUpdate;
       end;
     end;
   if CanRxWin <> nil then
     CanRxWin.RxCanUpdate;
-  if CanTxWin <> nil then
-    CanTxWin.RxCanUpdate;
+  if SetupData.CanFd then  
+    begin;  
+    if CanFdTxWin <> nil then
+      CanFdTxWin.RxCanUpdate;
+    end
+  else
+    begin;      
+    if CanTxWin <> nil then
+      CanTxWin.RxCanUpdate;
+    end;  
   end;
-end;  
+end;
 
 { TSyncThread }
 
 constructor TSyncThread.Create(AOwner: TMainWin);
   
 begin
-Owner := AOwner;
 inherited Create(True);  // Thread erzeugen nicht starten
-SyncEvent := CreateEvent(nil, false, false, 'SYNC_EVENT');
+Owner := AOwner;
+SyncEvent := CreateEvent(nil, false, false, 'CAN_SYNC_EVENT');
 if SyncEvent = 0 then
   raise Exception.Create('Unable to create SYNC_EVENT');
+EventsLock := TRUE;
 Priority := tpLower;
-FreeOnTerminate := false;
+FreeOnTerminate := FALSE;
 Resume;                  // Thread starten
 end;
 
@@ -1240,14 +1396,27 @@ end;
 destructor TSyncThread.Destroy;
 
 begin
+EventsLock := TRUE;
 if not Terminated then
   begin
   Terminate;
   SetEvent(SyncEvent);
-  WaitFor;
   end;
-CloseHandle(SyncEvent);
 inherited;
+end;
+
+
+procedure TSyncThread.DisableSync; 
+
+begin;
+EventsLock := TRUE; 
+end;
+
+
+procedure TSyncThread.EnableSync; 
+
+begin;
+EventsLock := FALSE;
 end;
 
 
@@ -1258,21 +1427,30 @@ SetEvent(SyncEvent);
 end;
 
 
+procedure TSyncThread.SyncFunc;
+ 
+begin; 
+if not EventsLock then
+  Owner.RxCanUpdate;
+end;
+
+
 procedure TSyncThread.Execute;
 begin
 while not Terminated do
   begin
   WaitForSingleObject(SyncEvent, INFINITE);
   if Terminated then
-    break; 
-  Synchronize(Owner.RxCanUpdate);
+    break;      
+  Synchronize(SyncFunc);
   Sleep(100);  // 100 ms Pause
   end;
+CloseHandle(SyncEvent);  
 end;
 
 
 initialization
-  RegisterClasses([TCanRxWin, TCanTxWin,
+  RegisterClasses([TCanRxWin, TCanTxWin, TCanFdTxWin,
         TCanGaugeWin, TCanBitValueWin,
         TCanValueWin]); // TGraphWin
 

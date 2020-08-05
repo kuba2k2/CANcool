@@ -25,7 +25,7 @@ U=0
 V=1
 W=0
 X=1
-Y=1
+Y=2
 Z=1
 ShowHints=1
 ShowWarnings=1
@@ -108,8 +108,8 @@ DebugCWD=
 [Version Info]
 IncludeVerInfo=1
 AutoIncBuild=0
-MajorVer=2
-MinorVer=2
+MajorVer=4
+MinorVer=0
 Release=1
 Build=0
 Debug=0
@@ -122,13 +122,13 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=MHS-Elektronik GmbH & Co. KG
 FileDescription=CANcool
-FileVersion=2.2.1.0
+FileVersion=4.0.1.0
 InternalName=CANcool
-LegalCopyright=MHS-Elektronik GmbH & Co. KG
+LegalCopyright=Copyright (c) 2012 - 2020 MHS-Elektronik
 LegalTrademarks=CANcool
 OriginalFilename=CANcool
 ProductName=CANcool
-ProductVersion=2.2.0.0
+ProductVersion=4.0.0.0
 Comments=
 [HistoryLists\hlUnitAliases]
 Count=1

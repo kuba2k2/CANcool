@@ -24,7 +24,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Buttons, Spin, ExtCtrls, IniFiles, zahlen32;
+  Dialogs, StdCtrls, Buttons, Spin, ExtCtrls, IniFiles, zahlen32, zahlen;
 
 type
   TCanGaugeSetupWin = class(TForm)
@@ -64,6 +64,28 @@ type
     Label10: TLabel;
     SizeEdit: TComboBox;
     CanIdEdit: TZahlen32Edit;
+    GroupBox1: TGroupBox;
+    Label11: TLabel;
+    Label12: TLabel;
+    Label13: TLabel;
+    DLCEdit: TZahlenEdit;
+    Mask7Edit: TZahlenEdit;
+    Mask8Edit: TZahlenEdit;
+    Mask6Edit: TZahlenEdit;
+    Mask5Edit: TZahlenEdit;
+    Mask4Edit: TZahlenEdit;
+    Mask3Edit: TZahlenEdit;
+    Mask2Edit: TZahlenEdit;
+    Mask1Edit: TZahlenEdit;
+    Data8Edit: TZahlenEdit;
+    Data7Edit: TZahlenEdit;
+    Data6Edit: TZahlenEdit;
+    Data5Edit: TZahlenEdit;
+    Data4Edit: TZahlenEdit;
+    Data3Edit: TZahlenEdit;
+    Data2Edit: TZahlenEdit;
+    Data1Edit: TZahlenEdit;
+    MuxEnabledCheck: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure OKBtnClick(Sender: TObject);
     procedure LadenBtnClick(Sender: TObject);
@@ -139,6 +161,27 @@ if TMainWin(Owner.Owner).OpenDialog.Execute then
     NameEdit.Text := IniDatei.ReadString('Common', 'Name', TMainWin(Owner.Owner).OpenDialog.FileName);
     Dateiname := NameEdit.Text;
     CANIDEdit.Number := IniDatei.ReadInteger('Common', 'CanID', 0);
+    DLCEdit.Number := IniDatei.ReadInteger('Common', 'MuxDlc', 8);
+    Mask1Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask0', 0);
+    Mask2Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask1', 0);
+    Mask3Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask2', 0);
+    Mask4Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask3', 0);
+    Mask5Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask4', 0);
+    Mask6Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask5', 0);
+    Mask7Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask6', 0);
+    Mask8Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanMask7', 0);
+    Data1Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData0', 0);
+    Data2Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData1', 0);
+    Data3Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData2', 0);
+    Data4Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData3', 0);
+    Data5Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData4', 0);
+    Data6Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData5', 0);
+    Data7Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData6', 0);
+    Data8Edit.Number := IniDatei.ReadInteger('Common', 'MuxCanData7', 0);
+    if IniDatei.ReadInteger('Common', 'MuxEnable', 0) > 0 then 
+      MuxEnabledCheck.Checked := True
+    else
+      MuxEnabledCheck.Checked := False;
     BerechnungsTermEdit.Text := IniDatei.ReadString('Common', 'Formula', 'd0');
     EinheitEdit.Text := IniDatei.ReadString('Specific', 'Unit', 'Unit');
     ColorEdit.Selected := TColor(IniDatei.ReadInteger('Specific', 'BaseColor', 0));
@@ -161,6 +204,7 @@ if TMainWin(Owner.Owner).OpenDialog.Execute then
   end;
 end;
 
+
 procedure TCanGaugeSetupWin.SpeichernBtnClick(Sender: TObject);
 var
   IniDatei: TIniFile;
@@ -181,6 +225,27 @@ if TMainWin(Owner.Owner).SaveDialog.Execute then
     IniDatei.WriteString('Common', 'Type', Owner.ClassName);
     IniDatei.WriteString('Common', 'Name', NameEdit.Text);
     IniDatei.WriteInteger('Common', 'CanID', CANIDEdit.Number);
+    IniDatei.WriteInteger('Common', 'MuxDlc', DLCEdit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask0', Mask1Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask1', Mask2Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask2', Mask3Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask3', Mask4Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask4', Mask5Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask5', Mask6Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask6', Mask7Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanMask7', Mask8Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData0', Data1Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData1', Data2Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData2', Data3Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData3', Data4Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData4', Data5Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData5', Data6Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData6', Data7Edit.Number);
+    IniDatei.WriteInteger('Common', 'MuxCanData7', Data8Edit.Number);
+    if MuxEnabledCheck.Checked then
+      IniDatei.WriteInteger('Common', 'MuxEnable', 1)
+    else
+      IniDatei.WriteInteger('Common', 'MuxEnable', 0);    
     IniDatei.WriteString('Common', 'Formula', BerechnungsTermEdit.Text);
     IniDatei.WriteString('Specific', 'Unit', EinheitEdit.Text);
     IniDatei.WriteInteger('Specific', 'BaseColor', Integer(ColorEdit.Selected));

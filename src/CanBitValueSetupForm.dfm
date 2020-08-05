@@ -1,110 +1,110 @@
 object CanBitValueSetupWin: TCanBitValueSetupWin
   Left = 1174
-  Top = 569
-  Width = 482
-  Height = 356
+  Top = 492
+  Width = 610
+  Height = 593
   AutoSize = True
   BorderWidth = 3
   Caption = 'Bit Indikator Konfiguration'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -11
+  Font.Height = -13
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
   Position = poMainFormCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 96
-  TextHeight = 13
+  PixelsPerInch = 110
+  TextHeight = 16
   object RahmenBevel: TBevel
     Left = 0
     Top = 0
-    Width = 364
-    Height = 316
+    Width = 464
+    Height = 533
     Style = bsRaised
   end
   object Label1: TLabel
-    Left = 35
-    Top = 45
-    Width = 11
-    Height = 13
+    Left = 43
+    Top = 55
+    Width = 13
+    Height = 16
     Caption = 'ID'
   end
   object Label9: TLabel
-    Left = 15
-    Top = 15
-    Width = 28
-    Height = 13
+    Left = 18
+    Top = 18
+    Width = 37
+    Height = 16
     Caption = 'Name'
   end
   object Bevel1: TBevel
-    Left = 372
-    Top = 160
-    Width = 96
-    Height = 6
+    Left = 478
+    Top = 197
+    Width = 118
+    Height = 7
     Shape = bsTopLine
   end
   object Label3: TLabel
-    Left = 10
-    Top = 70
-    Width = 26
-    Height = 13
+    Left = 12
+    Top = 234
+    Width = 33
+    Height = 16
     Caption = 'LEDs'
   end
   object OKBtn: TBitBtn
-    Left = 377
-    Top = 5
-    Width = 86
-    Height = 25
+    Left = 484
+    Top = 6
+    Width = 106
+    Height = 31
     Caption = 'OK'
     TabOrder = 0
     OnClick = OKBtnClick
     NumGlyphs = 2
   end
   object AbbrechenBtn: TBitBtn
-    Left = 377
-    Top = 40
-    Width = 85
-    Height = 25
+    Left = 484
+    Top = 49
+    Width = 104
+    Height = 31
     Caption = 'Abbrechen'
     ModalResult = 2
     TabOrder = 1
     NumGlyphs = 2
   end
   object NameEdit: TEdit
-    Left = 50
-    Top = 10
-    Width = 156
-    Height = 21
+    Left = 62
+    Top = 12
+    Width = 192
+    Height = 24
     TabOrder = 2
   end
   object LadenBtn: TBitBtn
-    Left = 377
-    Top = 85
-    Width = 86
-    Height = 25
+    Left = 484
+    Top = 105
+    Width = 106
+    Height = 30
     Caption = 'Laden'
     TabOrder = 3
     OnClick = LadenBtnClick
     NumGlyphs = 2
   end
   object SpeichernBtn: TBitBtn
-    Left = 377
-    Top = 120
-    Width = 86
-    Height = 25
+    Left = 484
+    Top = 148
+    Width = 106
+    Height = 30
     Caption = 'Speichern'
     TabOrder = 4
     OnClick = SpeichernBtnClick
     NumGlyphs = 2
   end
   object BitNameGrid: TStringGrid
-    Left = 10
-    Top = 83
-    Width = 346
-    Height = 225
+    Left = 12
+    Top = 256
+    Width = 442
+    Height = 267
     ColCount = 4
     DefaultColWidth = 48
     DefaultRowHeight = 16
@@ -123,32 +123,32 @@ object CanBitValueSetupWin: TCanBitValueSetupWin
       48)
   end
   object HinzufuegenBtn: TBitBtn
-    Left = 377
-    Top = 175
-    Width = 86
-    Height = 25
+    Left = 484
+    Top = 215
+    Width = 106
+    Height = 31
     Caption = 'Hinzuf'#252'gen'
     TabOrder = 6
     OnClick = HinzufuegenBtnClick
     NumGlyphs = 2
   end
   object EntfernenBtn: TBitBtn
-    Left = 377
-    Top = 210
-    Width = 86
-    Height = 25
+    Left = 484
+    Top = 258
+    Width = 106
+    Height = 31
     Caption = 'Entfernen'
     TabOrder = 7
     OnClick = EntfernenBtnClick
     NumGlyphs = 2
   end
   object BitComboBox: TComboBox
-    Left = 315
-    Top = 11
-    Width = 40
-    Height = 21
+    Left = 388
+    Top = 14
+    Width = 49
+    Height = 24
     Style = csDropDownList
-    ItemHeight = 13
+    ItemHeight = 16
     ItemIndex = 0
     TabOrder = 8
     Text = '0'
@@ -164,9 +164,9 @@ object CanBitValueSetupWin: TCanBitValueSetupWin
       '7')
   end
   object ColorBox: TColorBox
-    Left = 219
-    Top = 11
-    Width = 89
+    Left = 270
+    Top = 14
+    Width = 109
     Height = 22
     Style = [cbStandardColors, cbExtendedColors, cbPrettyNames]
     ItemHeight = 16
@@ -174,10 +174,10 @@ object CanBitValueSetupWin: TCanBitValueSetupWin
     OnExit = ColorBoxExit
   end
   object CanIdEdit: TZahlen32Edit
-    Left = 51
-    Top = 39
-    Width = 73
-    Height = 21
+    Left = 63
+    Top = 48
+    Width = 90
+    Height = 24
     Number = 0
     ZahlenFormat = HexFormat
     IdShowing = False
@@ -185,5 +185,362 @@ object CanBitValueSetupWin: TCanBitValueSetupWin
     HexMode = Z32AutoMode
     AutoFormat = False
     TabOrder = 10
+  end
+  object GroupBox1: TGroupBox
+    Left = 10
+    Top = 89
+    Width = 444
+    Height = 129
+    Caption = 'MUX'
+    TabOrder = 11
+    object Label4: TLabel
+      Left = 14
+      Top = 69
+      Width = 41
+      Height = 16
+      Alignment = taRightJustify
+      Caption = 'Maske'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+    end
+    object Label6: TLabel
+      Left = 167
+      Top = 30
+      Width = 26
+      Height = 16
+      Caption = 'DLC'
+    end
+    object Label11: TLabel
+      Left = 19
+      Top = 98
+      Width = 36
+      Height = 16
+      Alignment = taRightJustify
+      Caption = 'Daten'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+    end
+    object DLCEdit: TZahlenEdit
+      Tag = 1
+      Left = 198
+      Top = 20
+      Width = 30
+      Height = 24
+      Number = 0
+      ZahlenFormat = DezFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 0
+    end
+    object Mask7Edit: TZahlenEdit
+      Tag = 8
+      Left = 337
+      Top = 59
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 1
+    end
+    object Mask8Edit: TZahlenEdit
+      Tag = 9
+      Left = 384
+      Top = 59
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 2
+    end
+    object Mask6Edit: TZahlenEdit
+      Tag = 7
+      Left = 290
+      Top = 59
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 3
+    end
+    object Mask5Edit: TZahlenEdit
+      Tag = 6
+      Left = 244
+      Top = 59
+      Width = 45
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 4
+    end
+    object Mask4Edit: TZahlenEdit
+      Tag = 5
+      Left = 198
+      Top = 59
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 5
+    end
+    object Mask3Edit: TZahlenEdit
+      Tag = 4
+      Left = 151
+      Top = 59
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 6
+    end
+    object Mask2Edit: TZahlenEdit
+      Tag = 3
+      Left = 105
+      Top = 59
+      Width = 45
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 7
+    end
+    object Mask1Edit: TZahlenEdit
+      Tag = 2
+      Left = 59
+      Top = 59
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 8
+    end
+    object Data8Edit: TZahlenEdit
+      Tag = 9
+      Left = 384
+      Top = 89
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 9
+    end
+    object Data7Edit: TZahlenEdit
+      Tag = 8
+      Left = 337
+      Top = 89
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 10
+    end
+    object Data6Edit: TZahlenEdit
+      Tag = 7
+      Left = 290
+      Top = 89
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 11
+    end
+    object Data5Edit: TZahlenEdit
+      Tag = 6
+      Left = 244
+      Top = 89
+      Width = 45
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 12
+    end
+    object Data4Edit: TZahlenEdit
+      Tag = 5
+      Left = 198
+      Top = 89
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 13
+    end
+    object Data3Edit: TZahlenEdit
+      Tag = 4
+      Left = 151
+      Top = 89
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 14
+    end
+    object Data2Edit: TZahlenEdit
+      Tag = 3
+      Left = 105
+      Top = 89
+      Width = 45
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 15
+    end
+    object Data1Edit: TZahlenEdit
+      Tag = 2
+      Left = 59
+      Top = 89
+      Width = 46
+      Height = 24
+      Number = 0
+      ZahlenFormat = HexFormat
+      IdShowing = False
+      ByteMode = True
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -15
+      Font.Name = 'MS Sans Serif'
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 16
+    end
+    object MuxEnabledCheck: TCheckBox
+      Left = 10
+      Top = 30
+      Width = 119
+      Height = 20
+      Caption = 'Aktivieren'
+      TabOrder = 17
+    end
   end
 end
