@@ -41,6 +41,8 @@ const
   RX_WIN_SHOW_UNUSED_MSG = 10;
   RX_WIN_START_TRACE     = 11;
   RX_WIN_STOP_TRACE      = 12;
+  RX_WIN_LOAD_COMMENTS   = 13;
+  RX_WIN_SAVE_COMMENTS   = 14;
 
   CanBusStatusStr: array[0..3] of String = ('Bus Ok',
                                             'Error Warn.',
@@ -84,6 +86,8 @@ type
     N1: TMenuItem;
     ClearStatistikPopup: TMenuItem;
     ShowRxPannelPopup: TMenuItem;
+    OpenDialog: TOpenDialog;
+    SaveCmtDialog: TSaveDialog;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure RxViewDrawCell(Sender: TObject; ACol, ARow: Integer; Rect: TRect; State: TGridDrawState);
@@ -91,6 +95,7 @@ type
     procedure AddMsgToTxWinPopupClick(Sender: TObject);
     procedure ShowRxPannelPopupClick(Sender: TObject);
     procedure ClearStatistikPopupClick(Sender: TObject);
+    procedure RxViewDblClick(Sender: TObject);
   private
     { Private-Deklarationen }
     LineHeight: Integer;
@@ -106,12 +111,16 @@ type
     EnableTrace: boolean;
     RxList: TRxCanList;
     RxObjList: TRxCanObjList;
+    RxCommentList: TStringList;
+    RxCommentFile: String;
     TraceFile: String;
     procedure RxCanMessages(can_msg: PCanFdMsg; count: Integer); override;
     procedure RxCanUpdate; override;    
     procedure ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg);
     property ObjectMode: Boolean read FObjectMode write SetObjectMode;
     property RxDetailsShow: Boolean read FRxDetailsShow write SetRxDetailsShow;
+    procedure SaveConfig(ConfigList: TStrings); override;
+    procedure LoadConfig(ConfigList: TStrings); override;
   end;
 
 implementation
@@ -123,20 +132,22 @@ uses MainForm, CanTxForm;
 { TEmpfangForm }
 
 const
-RxViewCanObjHeaders: array[0..6,0..1] of String = (('Anzahl',        'XXXXXXXXXX'),
+RxViewCanObjHeaders: array[0..7,0..1] of String = (('Anzahl',        'XXXXXXXXXX'),
                                                    ('Period [s.ms]', 'XXXXXX.XXX'),
                                                    ('Frame',         'STD/RTR FD/BRS'),
                                                    ('ID',            '12345678'),
                                                    ('DLC',           '64'),
                                                    ('DATA [HEX]',    'XX XX XX XX XX XX XX XX'),
-                                                   ('DATA [ASCII]',  'AAAAAAAA'));
+                                                   ('DATA [ASCII]',  'AAAAAAAA'),
+                                                   ('Komentar',     'XXXX'));
 
-RxviewCanTraceHeaders: array[0..5,0..1] of String = (('Time [s.ms]',  'XXXXXX.XXX'),
+RxviewCanTraceHeaders: array[0..6,0..1] of String = (('Time [s.ms]',  'XXXXXX.XXX'),
                                                      ('Frame',        'STD/RTR FD/BRS'),         
                                                      ('ID',           '12345678'),               
                                                      ('DLC',          '64'),
                                                      ('DATA [HEX]',   'XX XX XX XX XX XX XX XX'),
-                                                     ('DATA [ASCII]', 'AAAAAAAA'));              
+                                                     ('DATA [ASCII]', 'AAAAAAAA'),
+                                                     ('Komentar',     'XXXX'));
                                                                     
 
 
@@ -154,12 +165,12 @@ if mode then
   else
     RxPanel.Visible := False;
   row_cnt := RxObjList.Count + 1;
-  col_cnt := 7;
+  col_cnt := 8;
   end
 else
   begin;
   row_cnt := RxList.Count + 1;
-  col_cnt := 6;
+  col_cnt := 7;
   RxPanel.Visible := False;
   end;
 if row_cnt < 2 then
@@ -182,6 +193,8 @@ for col := 0 to col_cnt - 1 do
     DrawText(RxView.Canvas.Handle, PChar(s), length(s), rect, DT_CalcRect or DT_Left);
     w := rect.Right - rect.Left;  // Breite
     h := rect.Bottom - rect.Top;   // Höhe
+    if col = col_cnt-1 then
+      w := w * 6;
     if w_max < w then
       w_max := w;
     if h_max < h then
@@ -216,6 +229,9 @@ ObjectMode := False;
 RxDetailsShow := False;
 TraceFile := '';
 SetObjectMode(False);
+RxCommentFile := '';
+RxCommentList := TStringList.Create();
+RxCommentList.Delimiter := '=';
 end;
 
 
@@ -715,6 +731,14 @@ case ACol of
       else
         str := '';
       end;
+    6 : begin;
+        str := 'ID' + Format('%03X',[can_msg^.ID]);
+        i := RxCommentList.IndexOfName(str);
+        if i <> -1 then
+          str := RxCommentList.Values[str]
+        else
+          str := '';
+      end;
   end;
 DrawText(RxView.Canvas.Handle, PChar(str), length(str), out_rect, DT_Left);
 end;
@@ -818,6 +842,21 @@ case cmd of
   RX_WIN_SHOW_UNUSED_MSG : RxFilterMode := RxMsgShowUnused;
   RX_WIN_START_TRACE : EnableTrace := True;
   RX_WIN_STOP_TRACE  : EnableTrace := False;
+  RX_WIN_LOAD_COMMENTS  : begin;
+                       if OpenDialog.Execute then
+                         begin;
+                          RxCommentFile := OpenDialog.FileName;
+                          RxCommentList.LoadFromFile(OpenDialog.FileName);
+                          RxView.Refresh;
+                       end;
+                       end;
+  RX_WIN_SAVE_COMMENTS  : begin;
+                       if SaveCmtDialog.Execute then
+                         begin;
+                          RxCommentFile := SaveCmtDialog.FileName;
+                          RxCommentList.SaveToFile(SaveCmtDialog.FileName);
+                       end;
+                       end;
   end;
 end;
 
@@ -835,6 +874,8 @@ procedure TCanRxWin.AddMsgToTxWinPopupClick(Sender: TObject);
 var can_msg: PCanFdMsg;
     msg_buf: TCanFdMsg;
     msg_obj_buf: TRxCanMsgObj;
+    i: Integer;
+    str: String;
 
 begin
   inherited;
@@ -854,8 +895,16 @@ else
   end;
 if (can_msg^.Flags and FlagCanFdError) > 0 then
   exit;  // Fehler Message
+
+str := 'ID' + Format('%X',[can_msg^.ID]);
+i := RxCommentList.IndexOfName(str);
+if i <> -1 then
+  str := RxCommentList.Values[str]
+else
+  str := '';
+
 if Assigned(MainWin.CanTxWin) then
-  MainWin.CanTxWin.ExecuteCmd(TX_WIN_ADD_MESSAGE, can_msg);
+  MainWin.CanTxWin.ExecuteCmd(TX_WIN_ADD_MESSAGE, can_msg, str);
 end;
 
 
@@ -872,6 +921,66 @@ begin
   inherited;
 RxObjList.ClearStat;
 RxView.Refresh;
+end;
+
+procedure TCanRxWin.LoadConfig(ConfigList: TStrings);
+begin
+  RxCommentFile := ConfigList.Values['CommentFile'];
+  if not FileExists(RxCommentFile) then
+    exit;
+
+  if length(RxCommentFile) > 0 then
+    RxCommentList.LoadFromFile(RxCommentFile);
+  RxView.Refresh;
+end;
+
+procedure TCanRxWin.SaveConfig(ConfigList: TStrings);
+begin
+  if RxCommentFile = '' then
+  begin;
+    RxCommentFile := ChangeFileExt(MainWin.ProjectFile, '.cmt');
+  end;
+  ConfigList.Values['CommentFile'] := RxCommentFile;
+
+  RxCommentList.SaveToFile(RxCommentFile);
+end;
+
+procedure TCanRxWin.RxViewDblClick(Sender: TObject);
+var can_msg: PCanFdMsg;
+    msg_buf: TCanFdMsg;
+    msg_obj_buf: TRxCanMsgObj;
+    id: string; str: String;
+    i: integer;
+begin
+  inherited;
+  if RxView.Row = 0 then
+    exit;
+  if RxView.Col <> RxView.ColCount - 1 then
+    exit;
+  if FObjectMode then
+  begin;
+    if RxObjList.ReadCanMsg(RxView.Row-1, msg_obj_buf) < 0 then
+      exit;
+    can_msg := @msg_obj_buf.CanMsg;
+  end
+  else
+  begin;
+    if RxList.ReadCanMsg(RxView.Row-1, msg_buf) < 0 then
+      exit;
+    can_msg := @msg_buf;
+  end;
+
+  id := 'ID' + Format('%X',[can_msg^.ID]);
+  i := RxCommentList.IndexOfName(id);
+  if i <> -1 then
+    str := RxCommentList.Values[id]
+  else
+    str := '';
+
+  str := InputBox('Komentar', id, str);
+
+  RxCommentList.Values[id] := str;
+  RxView.Refresh;
 end;
 
 end.

@@ -393,13 +393,13 @@ end;
 procedure LoadSetup(ini_file: TIniFile);
 
 begin;
-SetupData.Driver := ini_file.ReadInteger('GLOBAL', 'Driver', 0);
-SetupData.Port := ini_file.ReadInteger('GLOBAL', 'Port', 0);
-SetupData.BaudRate := ini_file.ReadInteger('GLOBAL', 'BaudRate', 0);
-SetupData.InterfaceType := ini_file.ReadInteger('GLOBAL', 'InterfaceType', 0);
+SetupData.Driver := ini_file.ReadInteger('GLOBAL', 'Driver', 1);
+SetupData.Port := ini_file.ReadInteger('GLOBAL', 'Port', 1);
+SetupData.BaudRate := ini_file.ReadInteger('GLOBAL', 'BaudRate', 8);
+SetupData.InterfaceType := ini_file.ReadInteger('GLOBAL', 'InterfaceType', 1);
 SetupData.HardwareSnr := ini_file.ReadString('GLOBAL', 'HardwareSnr', '');
 // Tab CAN
-SetupData.CANSpeed := ini_file.ReadInteger('GLOBAL', 'CANSpeed', 0);
+SetupData.CANSpeed := ini_file.ReadInteger('GLOBAL', 'CANSpeed', 5);
 SetupData.CANDataSpeed := ini_file.ReadInteger('GLOBAL', 'CANDataSpeed', 0);
 SetupData.NBTRValue := ini_file.ReadInteger('GLOBAL', 'NBTRValue', 0);
 SetupData.NBTRBitrate := ini_file.ReadString('GLOBAL', 'NBTRBitrate', '');

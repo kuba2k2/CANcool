@@ -7,7 +7,7 @@ object CanRxWin: TCanRxWin
   Caption = 'Empfang'
   Color = clBtnFace
   Constraints.MinHeight = 160
-  Constraints.MinWidth = 476
+  Constraints.MinWidth = 900
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -13
@@ -28,7 +28,7 @@ object CanRxWin: TCanRxWin
     Width = 701
     Height = 122
     Align = alClient
-    ColCount = 6
+    ColCount = 7
     DefaultColWidth = 53
     DefaultRowHeight = 16
     FixedCols = 0
@@ -44,6 +44,7 @@ object CanRxWin: TCanRxWin
     ShowHint = True
     TabOrder = 0
     OnClick = RxViewClick
+    OnDblClick = RxViewDblClick
     OnDrawCell = RxViewDrawCell
   end
   object RxPanel: TPanel
@@ -229,5 +230,19 @@ object CanRxWin: TCanRxWin
       Caption = 'Statistik l'#246'schen'
       OnClick = ClearStatistikPopupClick
     end
+  end
+  object OpenDialog: TOpenDialog
+    DefaultExt = 'cmt'
+    Filter = 'CAN-Komentar Liste (*.cmt)|*.cmt|Alle Dateien (*.*)|*.*'
+    Title = 'CAN-Komentar Liste Laden'
+    Left = 344
+    Top = 40
+  end
+  object SaveCmtDialog: TSaveDialog
+    DefaultExt = 'cmt'
+    Filter = 'CAN-Komentar Liste (*.cmt)|*.cmt|Alle Dateien (*.*)|*.*'
+    Title = 'CAN-Komentar Liste Speichern'
+    Left = 376
+    Top = 40
   end
 end

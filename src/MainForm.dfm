@@ -282,6 +282,20 @@ object MainWin: TMainWin
         GroupIndex = 2
         OnClick = SaveTraceMnuClick
       end
+      object N11: TMenuItem
+        Caption = '-'
+        GroupIndex = 2
+      end
+      object RxLoadCommentList: TMenuItem
+        Caption = 'Komentar Liste Laden'
+        GroupIndex = 2
+        OnClick = RxLoadCommentListClick
+      end
+      object RxSaveCommentList: TMenuItem
+        Caption = 'Komentar Liste Speichern'
+        GroupIndex = 2
+        OnClick = RxSaveCommentListClick
+      end
       object N2: TMenuItem
         Caption = '-'
         GroupIndex = 2

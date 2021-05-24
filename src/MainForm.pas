@@ -155,6 +155,9 @@ type
     CanResetBtn: TToolButton;
     LomCheckBtn: TToolButton;
     JustOne: TJustOne32;
+    N11: TMenuItem;
+    RxLoadCommentList: TMenuItem;
+    RxSaveCommentList: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure StatusBarDrawPanel(StatusBar: TStatusBar; Panel: TStatusPanel; const Rect: TRect);
     procedure FormShow(Sender: TObject);
@@ -192,6 +195,8 @@ type
     procedure LomCheckBtnClick(Sender: TObject);
     procedure RxPannelShowPopupClick(Sender: TObject);
     procedure RxShowPopupClick(Sender: TObject);
+    procedure RxLoadCommentListClick(Sender: TObject);
+    procedure RxSaveCommentListClick(Sender: TObject);
   private
     { Private-Deklarationen }
     ComThread: TComThread;
@@ -277,19 +282,14 @@ uses
 { TMainWin }
 
 procedure TMainWin.FormCreate(Sender: TObject);
-var cfg: TIniFile;
-
 begin;
 InitUtil;
 SyncThread := TSyncThread.Create(self);
 DataRecord := RecordStop;
 //StatusBar.Font.Style := [];
-cfg := TIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
-try
-  ProjectFile := cfg.ReadString('GLOBAL', 'ProjectFile', '');  
-finally
-  cfg.Free;
-  end;
+  ProjectFile := ChangeFileExt(Application.ExeName, '.prj');
+  if ParamStr(1) <> '' then
+    ProjectFile := ParamStr(1);
 end;
 
 
@@ -411,8 +411,12 @@ try
     NewProject;
     Left := ini_file.ReadInteger('MainWin', 'XPos', 0);
     Top := ini_file.ReadInteger('MainWin', 'YPos', 0);
-    Width := ini_file.ReadInteger('MainWin', 'Width', 1100);
+    Width := ini_file.ReadInteger('MainWin', 'Width', 1300);
     Height := ini_file.ReadInteger('MainWin', 'Height', 760);
+    if ini_file.ReadBool('MainWin', 'Maximized', False) then
+      WindowState := wsMaximized
+    else
+      WindowState := wsNormal;
     ini_file.ReadSections(SectionsListe);
     for i := SectionsListe.Count - 1 downto 0 do
       begin
@@ -487,6 +491,7 @@ try
     ini_file.WriteInteger('MainWin', 'YPos', Top);
     ini_file.WriteInteger('MainWin', 'Width', Width);
     ini_file.WriteInteger('MainWin', 'Height', Height);
+    ini_file.WriteBool('MainWin', 'Maximized', WindowState = wsMaximized);
 
     IniSections := TStringList.Create;
     ini_file.ReadSections(IniSections);
@@ -1054,7 +1059,7 @@ if SetupData.CanFd then
   if Assigned(CanFdTxWin) then
     CanFdTxWin.ExecuteCmd(TX_WIN_LOAD, nil);
   end
-else 
+else
   begin;
   if Assigned(CanTxWin) then
     CanTxWin.ExecuteCmd(TX_WIN_LOAD, nil);
@@ -1448,6 +1453,18 @@ while not Terminated do
 CloseHandle(SyncEvent);  
 end;
 
+
+procedure TMainWin.RxLoadCommentListClick(Sender: TObject);
+begin
+if Assigned(CanRxWin) then
+  CanRxWin.ExecuteCmd(RX_WIN_LOAD_COMMENTS, nil);
+end;
+
+procedure TMainWin.RxSaveCommentListClick(Sender: TObject);
+begin
+if Assigned(CanRxWin) then
+  CanRxWin.ExecuteCmd(RX_WIN_SAVE_COMMENTS, nil);
+end;
 
 initialization
   RegisterClasses([TCanRxWin, TCanTxWin, TCanFdTxWin,

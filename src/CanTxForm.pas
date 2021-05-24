@@ -99,7 +99,9 @@ type
     TxListFile: String;
     procedure RxCanMessages(can_msg: PCanFdMsg; count: Integer); override;
     procedure RxCanUpdate; override;    
-    procedure ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg);
+    procedure ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg; comment: String = '');
+    procedure SaveConfig(ConfigList: TStrings); override;
+    procedure LoadConfig(ConfigList: TStrings); override;
   end;
 
 
@@ -533,7 +535,7 @@ begin
 end;  
 
 
-procedure TCanTxWin.ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg);
+procedure TCanTxWin.ExecuteCmd(cmd: Integer; can_msg: PCanFdMsg; comment: String);
 var tx_msg: TTxCanMsg;
 
 begin;
@@ -589,6 +591,7 @@ case cmd of
                    begin;
                    EmptyMessage(@tx_msg);
                    Move(can_msg^, tx_msg.CanMsg, SizeOf(TCanFdMsg));
+                   tx_msg.Comment := comment;
                    TxList.Add(@tx_msg);
                    TxView.RowCount := TxList.Count+1;
                    TxView.Row := TxView.RowCount - 1;
@@ -718,6 +721,39 @@ if (TxView.Row <= TxList.Count) and (TxView.Row > 0) then
 if can_msg = nil then
   exit;
 SetMsgToUi(can_msg);
+end;
+
+procedure TCanTxWin.LoadConfig(ConfigList: TStrings);
+begin
+  TxListFile := ConfigList.Values['TxListFile'];
+  if not FileExists(TxListFile) then
+    exit;
+
+  if length(TxListFile) > 0 then
+  begin
+    TxList.Clear;
+    TxList.LoadFromFile(TxListFile);
+  end;
+  if TxList.Count = 0 then
+    exit;
+  TxView.RowCount := TxList.Count + 1;
+  TxView.Row := 1;
+  if TxView.Row <= TxList.Count then
+    SetMsgToUi(TxList.Items[TxView.Row-1])
+  else
+    SetMsgToUi(nil);
+  TxView.Refresh;
+end;
+
+procedure TCanTxWin.SaveConfig(ConfigList: TStrings);
+begin
+  if TxListFile = '' then
+  begin;
+    TxListFile := ChangeFileExt(MainWin.ProjectFile, '.txl');
+  end;
+  ConfigList.Values['TxListFile'] := TxListFile;
+
+  TxList.SaveToFile(TxListFile);
 end;
 
 

@@ -313,7 +313,7 @@ const
 var  f: TextFile;
      line, item: String;
      i, p: Integer;
-     tx_msg: TTxCanMsg;
+     tx_msg: PTxCanMsg;
      value: DWord;
 
 begin;
@@ -331,6 +331,17 @@ try
     // Frame;ID;DLC;D0;D1;D2;D3;D4;D5;D6;D7;TxMode;TriggerId;Intervall;Coment
     Readln(f, line);
 
+    New(tx_msg);
+
+    tx_msg^.CanMsg.Flags := 0;
+    tx_msg^.CanMsg.ID := 0;
+    for i := 0 to 7 do
+      tx_msg^.CanMsg.Data.Bytes[i] := 0;
+    tx_msg^.TxMode := 0;  // 0 = Off, 1 = Periodic, 2 = RTR, 3 = Trigger
+    tx_msg^.Intervall := 0;
+    tx_msg^.TriggerId := 0;
+    tx_msg^.Comment := '';
+
     p := 1;
     tx_msg.CanMsg.Flags := 0;
     // *** Frame Type lesen
@@ -345,7 +356,8 @@ try
     // **** DLC
     item := ExtractSubstr(line, p, Delims);
     value := StrtoIntDef(item, 0);
-    tx_msg.CanMsg.Flags := tx_msg.CanMsg.Flags or (value and FlagsCanLength);
+    //tx_msg.CanMsg.Flags := tx_msg.CanMsg.Flags or (value and FlagsCanLength);
+    tx_msg.CanMsg.Length := value;
     for i := 0 to 7 do
       begin;
       item := ExtractSubstr(line, p, Delims);
@@ -371,7 +383,7 @@ try
     item := ExtractSubstr(line, p, Delims);
     tx_msg.Comment := item;
 
-    Add(@tx_msg);
+    Add(tx_msg);
     end;
 finally
   CloseFile(f);

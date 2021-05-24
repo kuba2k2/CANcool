@@ -428,15 +428,15 @@ object CanTxWin: TCanTxWin
     end
   end
   object OpenDialog: TOpenDialog
-    DefaultExt = 'csv'
-    Filter = 'CSV Format (*.csv)|*.csv|Alle Dateien (*.*)|*.*'
+    DefaultExt = 'txl'
+    Filter = 'CAN Transmit Liste|*.txl|Alle Dateien (*.*)|*.*'
     Title = 'Senden Liste importieren'
     Left = 504
     Top = 136
   end
   object SaveDialog: TSaveDialog
-    DefaultExt = 'csv'
-    Filter = 'CSV Format (*.csv)|*.csv|Alle Dateien (*.*)|*.*'
+    DefaultExt = 'txl'
+    Filter = 'CAN Transmit Liste|*.txl|Alle Dateien (*.*)|*.*'
     Title = 'Senden Liste exportieren'
     Left = 544
     Top = 136
