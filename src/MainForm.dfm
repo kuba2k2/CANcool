@@ -4335,7 +4335,7 @@ object MainWin: TMainWin
   object AboutDialog: TXLAboutDialog
     Company = 'MHS-Elektronik GmbH && Co. KG'
     ProductName = 'CANcool'
-    Version = '4.0.1'
+    Version = '4.1.0, modified by kuba2k2, 2021-05'
     Copyright = 'Copyright (c) 2012 - 2020'
     URL = 'www.mhs-elektronik.de'
     EMail = 'info@mhs-elektronik.de'
