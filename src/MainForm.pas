@@ -319,25 +319,18 @@ end;
 
 
 procedure TMainWin.FormClose(Sender: TObject; var Action: TCloseAction);
-var cfg: TIniFile;
-
 begin;
-TinyCAN.CanDeviceClose;
-ComThreadTerminate;    // muss vor SyncThreadTerminate aufgerufen werden
-SyncThreadTerminate;
-TinyCAN.DownDriver;
-cfg := TIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
-try
-  cfg.WriteString('GLOBAL', 'ProjectFile', ProjectFile);
-finally
-  cfg.Free;
-  end;
 // Project speichern
 if ProjectFile <> '' then
   begin;
   if not SaveProject(ProjectFile) then
     MessageDlg('Projekt (' + ProjectFile + ') kann nicht gespeichert werden', mtError, [mbOk], 0);
   end;
+
+TinyCAN.CanDeviceClose;
+ComThreadTerminate;    // muss vor SyncThreadTerminate aufgerufen werden
+SyncThreadTerminate;
+TinyCAN.DownDriver;
 DestroyUtil;
 end;
 
@@ -623,7 +616,14 @@ if Assigned(CanRxWin) then
     CanRxWin.RxList.MaxClumps := SetupData.RxDLimit
   else
     CanRxWin.RxList.MaxClumps := 1;
-  end;  
+
+  RxShowingMode := Integer(CanRxWin.RxFilterMode);
+  SetRxShowingMode;
+  RxPannelShow := CanRxWin.RxDetailsShow;
+  SetRxPannelShow;
+  RxOjectView := CanRxWin.ObjectMode;
+  SetRxObjView;
+end;
 TinyCan.CanSpeed := TCanSpeed(SetupData.CANSpeed);  
 TinyCan.CanSpeedBtr := SetupData.NBTRValue;
 TinyCan.CanFdSpeed := TCanFdSpeed(SetupData.CANDataSpeed);

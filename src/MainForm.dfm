@@ -1,6 +1,6 @@
 object MainWin: TMainWin
-  Left = 576
-  Top = 155
+  Left = 603
+  Top = 140
   Width = 1238
   Height = 775
   Caption = 'CANcool'
@@ -9,7 +9,7 @@ object MainWin: TMainWin
   Constraints.MinWidth = 740
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -13
+  Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   FormStyle = fsMDIForm
@@ -19,11 +19,11 @@ object MainWin: TMainWin
   OnClose = FormClose
   OnCreate = FormCreate
   OnShow = FormShow
-  PixelsPerInch = 110
-  TextHeight = 16
+  PixelsPerInch = 96
+  TextHeight = 13
   object StatusBar: TStatusBar
     Left = 0
-    Top = 678
+    Top = 701
     Width = 1230
     Height = 23
     Panels = <
@@ -45,10 +45,10 @@ object MainWin: TMainWin
     Left = 0
     Top = 0
     Width = 1230
-    Height = 59
+    Height = 56
     AutoSize = True
-    ButtonHeight = 55
-    ButtonWidth = 85
+    ButtonHeight = 52
+    ButtonWidth = 70
     Caption = 'ToolBar'
     Customizable = True
     EdgeBorders = [ebTop, ebBottom]
@@ -65,21 +65,21 @@ object MainWin: TMainWin
       OnClick = NewChildBtnClick
     end
     object ProjectLoadBtn: TToolButton
-      Left = 88
+      Left = 73
       Top = 0
       Caption = 'Laden'
       ImageIndex = 2
       OnClick = ProjectLoadBtnClick
     end
     object ProjectSaveBtn: TToolButton
-      Left = 173
+      Left = 143
       Top = 0
       Caption = 'Speichern'
       ImageIndex = 1
       OnClick = ProjectSaveBtnClick
     end
     object ToolButton3: TToolButton
-      Left = 258
+      Left = 213
       Top = 0
       Width = 8
       Caption = 'ToolButton3'
@@ -87,7 +87,7 @@ object MainWin: TMainWin
       Style = tbsSeparator
     end
     object TraceStartStopBtn: TToolButton
-      Left = 266
+      Left = 221
       Top = 0
       Caption = 'Start'
       ImageIndex = 9
@@ -95,14 +95,14 @@ object MainWin: TMainWin
       OnClick = RxStartStopMnuClick
     end
     object TraceClearBtn: TToolButton
-      Left = 351
+      Left = 291
       Top = 0
       Caption = 'L'#246'schen'
       ImageIndex = 7
       OnClick = RxClearWinMnuClick
     end
     object TraceObjListBtn: TToolButton
-      Left = 436
+      Left = 361
       Top = 0
       Caption = 'Obj.-Liste'
       ImageIndex = 6
@@ -110,7 +110,7 @@ object MainWin: TMainWin
       OnClick = RxViewMnuClick
     end
     object TraceSetupBtn: TToolButton
-      Left = 521
+      Left = 431
       Top = 0
       Caption = 'Setup'
       DropdownMenu = TraceSetupPopup
@@ -119,14 +119,14 @@ object MainWin: TMainWin
       OnClick = TraceSetupBtnClick
     end
     object RxDListBtn: TToolButton
-      Left = 627
+      Left = 516
       Top = 0
       Caption = 'Empfangen'
       ImageIndex = 4
       OnClick = RxDListBtnClick
     end
     object ToolButton1: TToolButton
-      Left = 712
+      Left = 586
       Top = 0
       Width = 8
       Caption = 'ToolButton1'
@@ -134,7 +134,7 @@ object MainWin: TMainWin
       Style = tbsSeparator
     end
     object TxIntervallOnBtn: TToolButton
-      Left = 720
+      Left = 594
       Top = 0
       Caption = 'Intervall-On'
       ImageIndex = 11
@@ -142,14 +142,14 @@ object MainWin: TMainWin
       OnClick = TxIntervallOnBtnClick
     end
     object TxDListBtn: TToolButton
-      Left = 805
+      Left = 664
       Top = 0
       Caption = 'Senden'
       ImageIndex = 3
       OnClick = TxDListBtnClick
     end
     object ToolButton6: TToolButton
-      Left = 890
+      Left = 734
       Top = 0
       Width = 8
       Caption = 'ToolButton6'
@@ -157,21 +157,21 @@ object MainWin: TMainWin
       Style = tbsSeparator
     end
     object SetupBtn: TToolButton
-      Left = 898
+      Left = 742
       Top = 0
       Caption = 'Setup'
       ImageIndex = 5
       OnClick = SetupBtnClick
     end
     object CanResetBtn: TToolButton
-      Left = 983
+      Left = 812
       Top = 0
       Caption = 'BusOff Reset'
       ImageIndex = 12
       OnClick = ResetMnuClick
     end
     object LomCheckBtn: TToolButton
-      Left = 1068
+      Left = 882
       Top = 0
       Caption = 'Listen Only'
       ImageIndex = 13

@@ -101,13 +101,13 @@ type
     LineHeight: Integer;
     FObjectMode: Boolean;
     FRxDetailsShow: Boolean;
-    RxFilterMode: TRxMsgShowMode;
     procedure SetRxDetailsShow(mode: Boolean);
     procedure SetObjectMode(mode: Boolean);
     procedure CleanStatMessage;
     procedure DrawStatMessage(index: Integer);
   public
     { Public-Deklarationen }
+    RxFilterMode: TRxMsgShowMode;
     EnableTrace: boolean;
     RxList: TRxCanList;
     RxObjList: TRxCanObjList;
@@ -745,23 +745,50 @@ end;
 
 
 procedure TCanRxWin.RxCanMessages(can_msg: PCanFdMsg; count: Integer);
-var i: Integer;
-
+var i, j: Integer;
+    tx_ids: array of integer;
+    found: Boolean;
 begin
 if (not EnableTrace) or (count = 0) then
   exit;
+
+if Assigned(MainWin.CanTxWin) then
+begin
+  with MainWin.CanTxWin do
+  begin
+    SetLength(tx_ids, TxList.Count);
+    for i := 0 to TxList.Count - 1 do
+    begin
+      tx_ids[i] := TxList.Items[i].CanMsg.Id;
+    end;
+  end;
+end;
+
 for i := 1 to count do
-  begin;
+begin;
+  found := False;
+  for j := 0 to Length(tx_ids) - 1 do
+  begin
+    if (tx_ids[j] = can_msg^.Id) then
+      found := True;
+  end;
+
   if RxFilterMode = RxMsgShowUsed then
-    begin;
-    if (can_msg^.Flags and FlagsCanFilHit) = 0 then
-      continue;
-    end
-  else if RxFilterMode = RxMsgShowUnused then
-    begin;
-    if (can_msg^.Flags and FlagsCanFilHit) <> 0 then
+  begin;
+    if not found then
+    begin
+      inc(can_msg);
       continue;
     end;
+  end
+  else if RxFilterMode = RxMsgShowUnused then
+  begin;
+    if found then
+    begin
+      inc(can_msg);
+      continue;
+    end;
+  end;
   RxList.Add(can_msg);
   RxObjList.Add(can_msg);
   inc(can_msg);
@@ -926,6 +953,12 @@ end;
 procedure TCanRxWin.LoadConfig(ConfigList: TStrings);
 begin
   RxCommentFile := ConfigList.Values['CommentFile'];
+  if ConfigList.Values['FilterMode'] <> '' then
+    RxFilterMode := TRxMsgShowMode(StrToInt(ConfigList.Values['FilterMode']));
+  if ConfigList.Values['RxPanel'] <> '' then
+    RxDetailsShow := StrToBool(ConfigList.Values['RxPanel']);
+  if ConfigList.Values['ObjectView'] <> '' then
+    ObjectMode := StrToBool(ConfigList.Values['ObjectView']);
   if not FileExists(RxCommentFile) then
     exit;
 
@@ -941,6 +974,9 @@ begin
     RxCommentFile := ChangeFileExt(MainWin.ProjectFile, '.cmt');
   end;
   ConfigList.Values['CommentFile'] := RxCommentFile;
+  ConfigList.Values['FilterMode'] := IntToStr(Integer(RxFilterMode));
+  ConfigList.Values['RxPanel'] := BoolToStr(RxDetailsShow, True);
+  ConfigList.Values['ObjectView'] := BoolToStr(ObjectMode, True);
 
   RxCommentList.SaveToFile(RxCommentFile);
 end;

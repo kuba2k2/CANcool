@@ -43,7 +43,7 @@ begin
   Application.Initialize;
   Application.Title := 'CANcool';
   Application.CreateForm(TMainWin, MainWin);
-  Sleep(2500);
+  //Sleep(2500);
   //SplashForm.Hide;
   //SplashForm.Free;
   Application.Run;

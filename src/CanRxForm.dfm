@@ -7,10 +7,10 @@ object CanRxWin: TCanRxWin
   Caption = 'Empfang'
   Color = clBtnFace
   Constraints.MinHeight = 160
-  Constraints.MinWidth = 900
+  Constraints.MinWidth = 709
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -13
+  Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   FormStyle = fsMDIChild
@@ -20,13 +20,13 @@ object CanRxWin: TCanRxWin
   OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  PixelsPerInch = 110
-  TextHeight = 16
+  PixelsPerInch = 96
+  TextHeight = 13
   object RxView: TStringGrid
     Left = 0
     Top = 0
     Width = 701
-    Height = 122
+    Height = 163
     Align = alClient
     ColCount = 7
     DefaultColWidth = 53
@@ -35,7 +35,7 @@ object CanRxWin: TCanRxWin
     RowCount = 2
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -15
+    Font.Height = -12
     Font.Name = 'Courier New'
     Font.Style = []
     ParentFont = False
@@ -49,14 +49,14 @@ object CanRxWin: TCanRxWin
   end
   object RxPanel: TPanel
     Left = 0
-    Top = 122
+    Top = 163
     Width = 701
-    Height = 125
+    Height = 102
     Align = alBottom
     BevelOuter = bvNone
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -14
+    Font.Height = -12
     Font.Name = 'Courier New'
     Font.Style = []
     ParentFont = False
@@ -66,139 +66,139 @@ object CanRxWin: TCanRxWin
     object HeaderLabel: TLabel
       Left = 0
       Top = 0
-      Width = 344
-      Height = 17
+      Width = 301
+      Height = 15
       Caption = '[ID: ] [Count: 0] [Period: * Min: * Max: *]'
     end
     object Label2: TLabel
       Left = 0
-      Top = 49
-      Width = 32
-      Height = 17
+      Top = 40
+      Width = 28
+      Height = 15
       Caption = 'Hex:'
     end
     object Label3: TLabel
       Left = 0
-      Top = 69
-      Width = 64
-      Height = 17
+      Top = 56
+      Width = 56
+      Height = 15
       Caption = 'Dezimal:'
     end
     object Label4: TLabel
       Left = 0
-      Top = 89
-      Width = 56
-      Height = 17
+      Top = 72
+      Width = 49
+      Height = 15
       Caption = 'Binary:'
     end
     object AsciiLabel: TLabel
-      Left = 69
-      Top = 108
-      Width = 8
-      Height = 17
+      Left = 56
+      Top = 88
+      Width = 7
+      Height = 15
     end
     object Label6: TLabel
       Left = 0
-      Top = 108
-      Width = 48
-      Height = 17
+      Top = 88
+      Width = 42
+      Height = 15
       Caption = 'ASCII:'
     end
     object BinLabel: TLabel
-      Left = 69
-      Top = 89
-      Width = 8
-      Height = 17
+      Left = 56
+      Top = 72
+      Width = 7
+      Height = 15
     end
     object DezLabel: TLabel
-      Left = 69
-      Top = 69
-      Width = 8
-      Height = 17
+      Left = 56
+      Top = 56
+      Width = 7
+      Height = 15
     end
     object HexLabel: TLabel
-      Left = 69
-      Top = 49
-      Width = 8
-      Height = 17
+      Left = 56
+      Top = 40
+      Width = 7
+      Height = 15
     end
     object Label10: TLabel
-      Left = 69
-      Top = 20
-      Width = 568
-      Height = 17
+      Left = 56
+      Top = 16
+      Width = 497
+      Height = 15
       Caption = 
         '--- 0 -- --- 1 -- --- 2 -- --- 3 -- --- 4 -- --- 5 -- --- 6 -- -' +
         '-- 7 --'
     end
     object Analog1: TProgressBar
-      Left = 69
-      Top = 39
-      Width = 69
-      Height = 11
+      Left = 56
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 0
     end
     object Analog2: TProgressBar
-      Left = 146
-      Top = 39
-      Width = 69
-      Height = 11
+      Left = 119
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 1
     end
     object Analog3: TProgressBar
-      Left = 224
-      Top = 39
-      Width = 69
-      Height = 11
+      Left = 182
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 2
     end
     object Analog4: TProgressBar
-      Left = 302
-      Top = 39
-      Width = 68
-      Height = 11
+      Left = 245
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 3
     end
     object Analog5: TProgressBar
-      Left = 379
-      Top = 39
-      Width = 69
-      Height = 11
+      Left = 308
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 4
     end
     object Analog6: TProgressBar
-      Left = 457
-      Top = 39
-      Width = 69
-      Height = 11
+      Left = 371
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 5
     end
     object Analog7: TProgressBar
-      Left = 534
-      Top = 39
-      Width = 69
-      Height = 11
+      Left = 434
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 6
     end
     object Analog8: TProgressBar
-      Left = 612
-      Top = 39
-      Width = 69
-      Height = 11
+      Left = 497
+      Top = 32
+      Width = 56
+      Height = 9
       Max = 255
       Smooth = True
       TabOrder = 7
